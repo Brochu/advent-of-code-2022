@@ -11,17 +11,33 @@ pub fn main() {
 }
 
 fn run_part1() -> u64 {
-    let lines: Vec<_> = include_str!("../data/day1.example")
-        .lines()
-        .collect();
-
-    return lines.len() as u64;
+    return include_str!("../data/day1.input")
+        .split("\r\n\r\n")
+        .map(|e| {
+            e.lines()
+                .map(|v| v.trim().parse::<u64>().unwrap())
+                .sum()
+        })
+        .max().unwrap();
 }
 
 fn run_part2() -> u64 {
-    let lines: Vec<_> = include_str!("../data/day1.example")
-        .lines()
+    let mut totals: Vec<u64> = include_str!("../data/day1.input")
+        .split("\r\n\r\n")
+        .map(|e| {
+            e.lines()
+                .map(|v| v.trim().parse::<u64>().unwrap())
+                .sum()
+        })
         .collect();
 
-    return lines.len() as u64;
+    //println!("{:?}", totals);
+    totals.sort();
+    totals.reverse();
+    //println!("{:?}", totals);
+
+    let top = &totals[0..3];
+    //println!("{:?}", top);
+
+    return top.iter().sum();
 }
