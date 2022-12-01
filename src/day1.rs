@@ -22,22 +22,18 @@ fn run_part1() -> u64 {
 }
 
 fn run_part2() -> u64 {
-    let mut totals: Vec<u64> = include_str!("../data/day1.input")
+    let mut totals = include_str!("../data/day1.input")
         .split("\r\n\r\n")
         .map(|e| {
             e.lines()
                 .map(|v| v.trim().parse::<u64>().unwrap())
                 .sum()
         })
-        .collect();
-
-    //println!("{:?}", totals);
+        .collect::<Vec<u64>>();
     totals.sort();
-    totals.reverse();
-    //println!("{:?}", totals);
 
-    let top = &totals[0..3];
-    //println!("{:?}", top);
-
-    return top.iter().sum();
+    return totals.iter()
+        .rev()
+        .take(3)
+        .sum();
 }
