@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 pub fn main() {
     println!("[Day2] Solutions:");
 
@@ -10,11 +12,24 @@ pub fn main() {
     println!("[Day2] Complete -----------------------");
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, Eq, PartialEq, PartialOrd)]
 enum Shape {
     Rock,
     Paper,
     Scissors,
+}
+
+thread_local! {
+    static LOSE: HashMap<Shape, Shape> = HashMap::from([
+        (Shape::Rock, Shape::Scissors),
+        (Shape::Paper, Shape::Rock),
+        (Shape::Scissors, Shape::Paper),
+    ]);
+    static WIN: HashMap<Shape, Shape> = HashMap::from([
+        (Shape::Rock, Shape::Paper),
+        (Shape::Paper, Shape::Scissors),
+        (Shape::Scissors, Shape::Rock),
+    ]);
 }
 
 fn parse_shapes(s: (&str, &str)) -> (Shape, Shape) {
@@ -68,7 +83,7 @@ fn parse_shapes_part2(s: (&str, &str)) -> (Shape, Shape) {
     };
 
     let yours = match s.1.trim() {
-        "X" => find_lose(&other),
+        "X" => LOSE.get(),
         "Y" => find_tie(&other),
         "Z" => find_win(&other),
         _ => panic!("[Day2] Could not parse shape")
