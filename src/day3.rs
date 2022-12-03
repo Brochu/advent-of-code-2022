@@ -17,58 +17,51 @@ pub fn main() {
 }
 
 fn calc_priority(item: &char) -> u64 {
-    if item.is_uppercase() {
-        let base = (b'A' as u8) - 1;
-        return ((*item as u8) - base + 26) as u64;
-    }
-    else {
-        let base = (b'a' as u8) - 1;
-        return ((*item as u8) - base) as u64;
-    }
+    return match item {
+        'A'..='Z' => (*item as u64) - 38,
+        'a'..='z' => (*item as u64) - 96,
+        _ => 0,
+    };
 }
 
-fn run_part1(sacks: &Vec<&str>) -> u64 {
-    let sets: Vec<_> = sacks.iter()
-        .map(|list| {
-            let first: HashSet<char> = list.chars().take(list.len() / 2).collect();
-            let second: HashSet<char> = list.chars().skip(list.len() / 2).take(list.len() / 2).collect();
-            (first, second)
-        })
-        .collect();
+type Comp = HashSet<char>;
 
-    return sets.iter()
-        .flat_map(|set| set.0.intersection(&set.1))
-        .map(|r| calc_priority(r))
-        .sum();
+fn run_part1(sacks: &Vec<&str>) -> u64 {
+    let compartments = sacks.iter()
+        .map(|list| {
+            let (left, right) = list.split_at(list.len() / 2);
+            (left.chars().collect::<Comp>(), right.chars().collect::<Comp>())
+        })
+        .collect::<Vec<(Comp, Comp)>>();
+
+    return compartments.iter()
+        .flat_map(|c| c.0.intersection(&c.1))
+        .map(|ch| calc_priority(ch))
+        .sum::<u64>();
 }
 
 fn run_part2(sacks: &Vec<&str>) -> u64 {
-    let groups: Vec<_> = sacks[0..]
-        .chunks(3)
-        .map(|g| {
-            let letters: Vec<HashSet<char>> = g.iter()
-                .map(|s| s.chars().collect()).collect();
+    return sacks[..].chunks(3)
+        .map(|group| {
+            group.iter()
+                .fold(String::new(), |items, elf| {
+                    if items.len() > 0 {
+                        //println!("itm : {:?}", items);
+                        //println!("elf : {:?}", elf);
 
-            letters
+                        let past = items.chars().collect::<Comp>();
+                        let curr = elf.chars().collect::<Comp>();
+                        //println!("itm : {:?}", past);
+                        //println!("elf : {:?}", curr);
+
+                        curr.intersection(&past).map(|&c| c).collect::<String>()
+                    }
+                    else {
+                        let curr = elf.chars().collect::<Comp>();
+                        curr.iter().collect::<String>()
+                    }
+                })
         })
-        .collect();
-
-    let bands: Vec<_> = groups.iter()
-        .map(|g| {
-            g
-        })
-        .collect();
-
-    let mut badges = Vec::<char>::new();
-    for b in bands {
-        let first: HashSet<&char> = b[0].intersection(&b[1]).collect();
-        let second: HashSet<&char> = b[0].intersection(&b[2]).collect();
-
-        let test = first.intersection(&second);
-        test.for_each(|t| badges.push(**t));
-    }
-
-    return badges.iter()
-        .map(|c| calc_priority(c))
+        .map(|c| calc_priority(&c.chars().next().unwrap()))
         .sum();
 }
