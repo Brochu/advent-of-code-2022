@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 pub fn main() {
     println!("[Day2] Solutions:");
 
@@ -17,19 +15,6 @@ enum Shape {
     Rock,
     Paper,
     Scissors,
-}
-
-thread_local! {
-    static LOSE: HashMap<Shape, Shape> = HashMap::from([
-        (Shape::Rock, Shape::Scissors),
-        (Shape::Paper, Shape::Rock),
-        (Shape::Scissors, Shape::Paper),
-    ]);
-    static WIN: HashMap<Shape, Shape> = HashMap::from([
-        (Shape::Rock, Shape::Paper),
-        (Shape::Paper, Shape::Scissors),
-        (Shape::Scissors, Shape::Rock),
-    ]);
 }
 
 fn parse_shapes(s: (&str, &str)) -> (Shape, Shape) {
@@ -83,7 +68,7 @@ fn parse_shapes_part2(s: (&str, &str)) -> (Shape, Shape) {
     };
 
     let yours = match s.1.trim() {
-        "X" => LOSE.get(),
+        "X" => find_lose(&other),
         "Y" => find_tie(&other),
         "Z" => find_win(&other),
         _ => panic!("[Day2] Could not parse shape")
@@ -128,8 +113,6 @@ fn run_part1() -> u64 {
         .lines()
         .map(|s| parse_shapes(s.split_once(" ").unwrap()))
         .map(|m| calc_outcome(m.0, m.1))
-        .collect::<Vec<u64>>()
-        .iter()
         .sum();
 }
 
@@ -138,7 +121,5 @@ fn run_part2() -> u64 {
         .lines()
         .map(|s| parse_shapes_part2(s.split_once(" ").unwrap()))
         .map(|m| calc_outcome(m.0, m.1))
-        .collect::<Vec<u64>>()
-        .iter()
         .sum();
 }
