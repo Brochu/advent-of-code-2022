@@ -12,17 +12,20 @@ pub fn main() {
 }
 
 fn valid_start(window: &[char]) -> bool {
-    // There must be a better way???
-    let n = window.iter().count();
+    let idx_map = window.iter()
+        .map(|&c| c as u8 - b'a' as u8);
 
-    for i in 0..n {
-        for j in 0..n {
-            if i != j && window[i] == window[j] {
-                return false
-            }
+    let mut bitfield: u32 = 0;
+
+    for idx in idx_map {
+        let mask: u32 = 1 << idx;
+
+        if (bitfield & mask) > 0 {
+            return false;
         }
-    }
 
+        bitfield |= mask;
+    }
     return true;
 }
 
@@ -30,7 +33,7 @@ fn run_part1(streams: &Vec<&str>) -> usize {
     let starts = streams.iter()
         .map(|stream| {
             stream.chars().collect::<Vec<char>>()
-                .windows(4) .enumerate()
+                .windows(4).enumerate()
                 .fold((false, 0), |res, win| {
                     match  res.0 {
                         true => res,
@@ -51,7 +54,7 @@ fn run_part2(streams: &Vec<&str>) -> usize {
     let starts = streams.iter()
         .map(|stream| {
             stream.chars().collect::<Vec<char>>()
-                .windows(14) .enumerate()
+                .windows(14).enumerate()
                 .fold((false, 0), |res, win| {
                     match  res.0 {
                         true => res,
