@@ -11,10 +11,10 @@ pub fn main() {
     println!("[Day0] Complete -----------------------");
 }
 
-fn run_part1(lines: &Vec<&str>) -> u64 {
-    return lines.len() as u64;
+fn run_part1(lines: &Vec<&str>) -> usize {
+    return lines.len();
 }
 
-fn run_part2(lines: &Vec<&str>) -> u64 {
-    return lines.len() as u64;
+fn run_part2(lines: &Vec<&str>) -> usize {
+    return lines.len();
 }
