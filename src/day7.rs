@@ -1,26 +1,22 @@
-struct FS {
-    nodes: Vec<FSNode>,
-    tree: Vec<FSRef>,
-}
+use std::rc::Rc;
+use std::cell::RefCell;
 
 struct FSNode {
     name: String,
     size: usize,
+
+    parent: Option<Rc<RefCell<FSNode>>>,
+    children: Vec<Rc<RefCell<FSNode>>>,
 }
 
-struct FSRef {
-    index: usize,
-    parent: Option<usize>,
-    children: Vec<usize>,
-}
-
-fn build_fs(cmds: Vec<&str>) -> FS {
-    let mut nodes: Vec<FSNode> = Vec::new();
-    nodes.push(FSNode { name: "/".to_string(), size: 0 });
-
-    let mut tree: Vec<FSRef> = Vec::new();
-    tree.push(FSRef { index: 0, parent: None, children: Vec::new() });
-    let mut current_idx = 0;
+fn build_fs(cmds: Vec<&str>) -> Rc<RefCell<FSNode>> {
+    let root = Rc::new(RefCell::new(FSNode {
+        name: "/".to_string(),
+        size: 0,
+        parent: None,
+        children: Vec::new()
+    }));
+    let mut current = Rc::clone(&root);
 
     let mut cmd_iter = cmds.iter().skip(1); // Since the root is already created, skip first cd
     while let Some(&cmd) = cmd_iter.next() {
@@ -32,10 +28,13 @@ fn build_fs(cmds: Vec<&str>) -> FS {
                 let (_, target_name) = rest.split_once(" ").unwrap();
                 //println!("Change directory to {}", target_name);
 
-                match tree[current_idx].children.iter().find(|&&i| nodes[i].name == target_name) {
-                    Some(&i) => current_idx = i,
-                    None => current_idx = tree[current_idx].parent.unwrap(),
-                }
+                let clone = Rc::clone(&current);
+                let node = clone.borrow();
+                let target = node.children.iter().find(|c| c.borrow().name == target_name);
+                match target {
+                    Some(n) => current = Rc::clone(n),
+                    None => current = Rc::clone(&node.parent.as_ref().unwrap()),
+                };
             },
             _ => {
                 let (first, second) = cmd.split_once(" ").unwrap();
@@ -45,64 +44,55 @@ fn build_fs(cmds: Vec<&str>) -> FS {
                 };
 
                 //println!("New node -> name: {}; size: {}", name, size);
-                let index = nodes.len();
-                let tree_idx = tree.len();
 
-                nodes.push(FSNode { name: name.to_string(), size });
-                tree.push(FSRef { index, parent: Some(current_idx), children: Vec::new() });
-                tree[current_idx].children.push(tree_idx);
+                let child = Rc::new(RefCell::new(FSNode {
+                    name: name.to_string(),
+                    size,
+                    parent: Some(Rc::clone(&current)),
+                    children: Vec::new()
+                }));
+
+                let mut mut_curr = current.borrow_mut();
+                mut_curr.children.push(child);
             },
         }
     }
 
-    calc_dir_sizes(&mut nodes, &tree);
-    return FS { nodes, tree };
+    _ = calc_dir_sizes(Rc::clone(&root));
+    return root;
 }
 
-fn calc_dir_sizes(nodes: &mut Vec<FSNode>, tree: &Vec<FSRef>) {
-    calc_dir_sizes_impl(nodes, tree, 0);
-}
-
-fn calc_dir_sizes_impl(nodes: &mut Vec<FSNode>, tree: &Vec<FSRef>, cur_idx: usize) {
-    let curr_ref = &tree[cur_idx];
-
-    if curr_ref.children.len() <= 0 {
-        return
+fn calc_dir_sizes(current: Rc<RefCell<FSNode>>) -> usize {
+    if current.borrow().children.len() <= 0 {
+        return current.borrow().size;
     }
     else {
-        curr_ref.children
+        let dir_size = current.borrow().children
             .iter()
-            .for_each(|&c| calc_dir_sizes_impl(nodes, tree, c));
-
-        let dir_size = curr_ref.children
-            .iter()
-            .map(|&c| {
-                let fs_ref = &tree[c];
-                let other = &nodes[fs_ref.index];
-                other.size
-            })
+            .map(|c| calc_dir_sizes(c.to_owned()))
             .sum::<usize>();
 
-        nodes[curr_ref.index].size = dir_size;
+        current.borrow_mut().size = dir_size;
+        return dir_size;
     }
 }
 
-fn debug_fs(fs: &FS) {
-    debug_ref(&fs.tree[0], &fs, 0);
+fn debug_fs(root: Rc<RefCell<FSNode>>) {
+    debug_fs_impl(root, 0);
 }
 
-fn debug_ref(current: &FSRef, fs: &FS, depth: usize) {
-    let node: &FSNode = &fs.nodes[current.index];
-
+fn debug_fs_impl(current: Rc<RefCell<FSNode>>, depth: usize) {
     let prefix = (0..depth).map(|_| ' ').collect::<String>();
-    if current.children.len() > 0 {
-        println!("{}- {} (dir, size={})", prefix, node.name, node.size);
+    let curr = current.borrow();
 
-        current.children.iter()
-            .for_each(|&i| debug_ref(&fs.tree[i], fs, depth+1));
+    if curr.children.len() > 0 {
+        println!("{}- {} (dir, size={})", prefix, curr.name, curr.size);
+
+        curr.children.iter()
+            .for_each(|c| debug_fs_impl(c.to_owned(), depth+1));
     }
     else {
-        println!("{}- {} (file, size={})", prefix, node.name, node.size);
+        println!("{}- {} (file, size={})", prefix, curr.name, curr.size);
     }
 }
 
@@ -116,53 +106,68 @@ pub fn main() {
     let fs = build_fs(cmds);
 
     println!();
-    debug_fs(&fs);
+    debug_fs(Rc::clone(&fs));
     println!();
 
-    println!("[Day7] Part 1 => {}", run_part1(&fs));
-    println!("[Day7] Part 2 => {}", run_part2(&fs));
+    println!("[Day7] Part 1 => {}", run_part1(Rc::clone(&fs)));
+    println!("[Day7] Part 2 => {}", run_part2(Rc::clone(&fs)));
 
     println!("[Day7] Complete -----------------------");
 }
 
-fn run_part1(fs: &FS) -> usize {
-    return fs.tree.iter()
+fn list_dir(fs: Rc<RefCell<FSNode>>) -> Vec<Rc<RefCell<FSNode>>> {
+    let mut ret = Vec::<Rc<RefCell<FSNode>>>::new();
+
+    list_dir_impl(fs, &mut ret);
+    return ret;
+}
+
+fn list_dir_impl(fs: Rc<RefCell<FSNode>>, list: &mut Vec<Rc<RefCell<FSNode>>>) {
+    if fs.borrow().children.len() > 0 {
+        list.push(Rc::clone(&fs));
+        fs.borrow().children
+            .iter()
+            .for_each(|c| list_dir_impl(c.to_owned(), list));
+    }
+}
+
+fn run_part1(fs: Rc<RefCell<FSNode>>) -> usize {
+    return list_dir(fs).iter()
         .filter_map(|n| {
-            if n.children.len() <= 0 {
+            let curr = n.borrow();
+            if curr.children.len() <= 0 {
                 None
             }
             else {
-                let node = &fs.nodes[n.index];
-                if node.size > 100_000 {
+                if curr.size > 100_000 {
                     None
                 }
                 else {
-                    Some(node.size)
+                    Some(curr.size)
                 }
             }
         })
         .sum();
 }
 
-fn run_part2(fs: &FS) -> usize {
+fn run_part2(fs: Rc<RefCell<FSNode>>) -> usize {
     const SPACE_AVAILABLE: usize = 70_000_000;
     const SPACE_NEEDED: usize = 30_000_000;
 
-    let root = &fs.nodes[0];
-    let unused = SPACE_AVAILABLE - root.size;
+    let unused = SPACE_AVAILABLE - fs.borrow().size;
     let missing = SPACE_NEEDED - unused;
 
     //println!("unused space = {}; needed = {}; missing = {}", unused, SPACE_NEEDED, missing);
 
-    return fs.tree.iter()
+    return list_dir(fs).iter()
         .filter_map(|n| {
-            if n.children.len() <= 0 {
+            let curr = n.borrow();
+            if curr.children.len() <= 0 {
                 None
             }
             else {
-                let node = &fs.nodes[n.index];
-                if node.size >= missing {
-                    Some(node.size)
+                if curr.size >= missing {
+                    Some(curr.size)
                 }
                 else {
                     None
