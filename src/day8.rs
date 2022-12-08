@@ -34,23 +34,11 @@ impl Map {
 
     pub fn vision_range(&self, x: usize, y: usize) -> Vec<Vec<(usize, usize)>> {
         return vec![ // Up, Down, Left, Right
-            (0..y).map(|yc| (x, yc)).collect::<Vec<(usize, usize)>>(),
+            (0..y).map(|yc| (x, yc)).rev().collect::<Vec<(usize, usize)>>(),
             (y+1..self.n).map(|yc| (x, yc)).collect::<Vec<(usize, usize)>>(),
-            (0..x).map(|xc| (xc, y)).collect::<Vec<(usize, usize)>>(),
+            (0..x).map(|xc| (xc, y)).rev().collect::<Vec<(usize, usize)>>(),
             (x+1..self.n).map(|xc| (xc, y)).collect::<Vec<(usize, usize)>>(),
         ];
-    }
-}
-
-impl ToString for Map {
-    fn to_string(&self) -> String {
-        let mut output = String::from("");
-        output.push_str(format!("Map of size {}\n", self.n).as_str());
-
-        self.trees[..].chunks(self.n.into())
-            .for_each(|chunk| output.push_str(format!("{:?}\n", chunk).as_str()));
-
-        return output;
     }
 }
 
@@ -58,13 +46,7 @@ pub fn main() {
     println!("[Day8] Solutions:");
 
     let map = Map::new(include_str!("../data/day8.input"));
-    //println!("{}", map.to_string());
-    //println!("{}", map.get(4, 4));
-    //map.inner_range().iter()
-    //    .for_each(|coord| println!("{:?}", coord));
-    //map.vision_range(3, 3).iter()
-    //    .for_each(|coord| println!("{:?}", coord));
-    
+
     println!("[Day8] Part 1 => {}", run_part1(&map));
     println!("[Day8] Part 2 => {}", run_part2(&map));
 
@@ -76,7 +58,7 @@ fn run_part1(map: &Map) -> usize {
 
     return map.inner_range()
         .iter()
-        .map(|(x, y)|{
+        .map(|(x, y)| {
             let curr_height = map.get(*x, *y);
             map.vision_range(*x, *y)
                 .iter()
@@ -88,6 +70,24 @@ fn run_part1(map: &Map) -> usize {
         .count() + outside;
 }
 
-fn run_part2(_map: &Map) -> usize {
-    return 0;
+fn run_part2(map: &Map) -> usize {
+    return map.inner_range()
+        .iter()
+        .map(|(x, y)| {
+            let curr_height = map.get(*x, *y);
+            map.vision_range(*x, *y)
+                .iter()
+                .fold(1, |seen_count, directions| {
+                    let mut sub_count = 0;
+                    for (ox, oy) in directions {
+                        sub_count += 1;
+
+                        if map.get(*ox, *oy) >= curr_height {
+                            break;
+                        }
+                    }
+                    seen_count * sub_count
+                })
+        })
+        .max().unwrap();
 }
