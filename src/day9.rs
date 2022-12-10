@@ -22,8 +22,35 @@ impl ToString for Pos {
     }
 }
 
-fn show_grid(head: &Pos, tail: &Pos) {
-    println!("Head: {}; Tail: {}", head.to_string(), tail.to_string());
+//fn show_grid(head: &Pos, tail: &Pos) {
+//    println!("Head: {}; Tail: {}", head.to_string(), tail.to_string());
+//}
+
+fn show_grid_part2(positions: &[Rc<RefCell<Pos>>], dims: usize) {
+    let mut output = Vec::<char>::new();
+    output.resize(dims * dims, '.');
+
+    positions.iter()
+        .enumerate()
+        .rev()
+        .for_each(|(i, p)| {
+            let pos = p.borrow();
+            let idx = ((dims * dims) - 1) - ((pos.y * dims as i64) + pos.x) as usize;
+
+            let letter = match i {
+                0 => 'H',
+                9 => 'T',
+                _ => i.to_string()[0..1].chars().nth(0).unwrap(),
+            };
+            output[idx] = letter;
+        });
+
+    output[..].chunks(dims)
+        .for_each(|c| {
+            c.iter().rev()
+                .for_each(|v| print!("{}", v));
+            println!();
+        });
 }
 
 fn should_move_tail(head: &Pos, tail: &Pos) -> bool {
@@ -40,7 +67,7 @@ fn should_move_tail(head: &Pos, tail: &Pos) -> bool {
     }
 }
 
-fn new_tail_pos(head: &Pos, tail: &Pos, m: &Move) -> Pos {
+fn new_tail_pos(head: &Pos, tail: &Pos, _m: &Move) -> Pos {
     let (xdiff, ydiff) = (head.x - tail.x, head.y - tail.y);
 
     if xdiff == 0 || ydiff == 0 {
@@ -48,19 +75,23 @@ fn new_tail_pos(head: &Pos, tail: &Pos, m: &Move) -> Pos {
     }
     else {
         //println!("Diag case ({}, {}), ({}, {}) -> ({}, {}) [{:?}]", head.x, head.y, tail.x, tail.y, xdiff, ydiff, m);
-        return match m {
-            Move::Up(_) => Pos { x: tail.x + xdiff, y: tail.y + 1 },
-            Move::Down(_) => Pos { x: tail.x + xdiff, y: tail.y - 1 },
-            Move::Left(_) => Pos { x: tail.x - 1, y: tail.y + ydiff },
-            Move::Right(_) => Pos { x: tail.x + 1, y: tail.y + ydiff },
-        };
+        //return match m {
+        //    Move::Up(_) => Pos { x: tail.x + xdiff, y: tail.y + 1 },
+        //    Move::Down(_) => Pos { x: tail.x + xdiff, y: tail.y - 1 },
+        //    Move::Left(_) => Pos { x: tail.x - 1, y: tail.y + ydiff },
+        //    Move::Right(_) => Pos { x: tail.x + 1, y: tail.y + ydiff },
+        //};
+        let xmod = xdiff.signum();
+        let ymod = ydiff.signum();
+
+        return Pos { x: tail.x + xmod, y: tail.y + ymod };
     }
 }
 
 pub fn main() {
     println!("[Day9] Solutions:");
 
-    let moves = include_str!("../data/day9.example")
+    let moves = include_str!("../data/day9.input")
         .lines()
         .map(|line| {
             let (dir, nstr) = line.split_once(" ").unwrap();
@@ -111,8 +142,12 @@ fn run_part1(moves: &Vec<Move>) -> usize {
 }
 
 fn run_part2(moves: &Vec<Move>) -> usize {
+    let count = 10;
+
     let mut pos: Vec<Rc<RefCell<Pos>>> = Vec::new();
-    pos.resize(10, Rc::new(RefCell::new(Pos { x: 0, y: 0 })));
+    for _ in 0..count {
+        pos.push(Rc::new(RefCell::new(Pos { x: 0, y: 0 })));
+    }
 
     let mut visited = HashSet::<(i64, i64)>::new();
 
@@ -126,30 +161,32 @@ fn run_part2(moves: &Vec<Move>) -> usize {
             };
 
             for _ in range {
-                // Apply move here only once to first index
+                // Update head position
+                pos[0].borrow_mut().x += xmod;
+                pos[0].borrow_mut().y += ymod;
+
                 (0..pos.len()).collect::<Vec<usize>>()
                     .windows(2)
                     .for_each(|w| {
-                        // React to movement in each window like we did for part 1
-                        println!("{:?}", w);
-                        let head = Rc::clone(&pos[w[0]]);
-                        let tail = Rc::clone(&pos[w[1]]);
+                        let last = Rc::clone(&pos[w[0]]);
+                        let current = Rc::clone(&pos[w[1]]);
 
-                        head.borrow_mut().x += xmod;
-                        head.borrow_mut().y += ymod;
+                        if should_move_tail(&last.borrow(), &current.borrow()) {
+                            let new_pos = new_tail_pos(&last.borrow(), &current.borrow(), m);
+                            let mut cur_mut = current.borrow_mut();
+                            cur_mut.x = new_pos.x;
+                            cur_mut.y = new_pos.y;
 
-                        if should_move_tail(&head.borrow(), &tail.borrow()) {
-                            let new_pos = new_tail_pos(&head.borrow(), &tail.borrow(), m);
-                            tail.borrow_mut().x = new_pos.x;
-                            tail.borrow_mut().y = new_pos.y;
-                            visited.insert((tail.borrow().x, tail.borrow().y));
+                            if w[1] == 9 {
+                                visited.insert((cur_mut.x, cur_mut.y));
+                            }
                         }
                     });
+
+                //show_grid_part2(&pos[..], 45);
+                //println!();
             }
-            pos.iter()
-                .for_each(|p| println!("{:?}", p));
         });
 
     return visited.len() + 1;
-
 }
