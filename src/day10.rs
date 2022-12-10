@@ -5,6 +5,49 @@ enum Op {
     Addx(i64),
 }
 
+fn num_cycles(op: &Op) -> usize {
+    match op {
+        Op::Exit => 1,
+        Op::Noop => 1,
+        Op::Addx(_) => 2,
+    }
+}
+
+fn run_program(program: &Vec<Op>) -> Vec<i64> {
+    let mut prog_iter = program.iter();
+    let mut pc: Option<(&Op, usize)> = None;
+    let mut x: i64 = 1;
+    
+    let mut samples: Vec<i64> = Vec::new();
+
+    loop {
+        let (op, clocks) = pc.unwrap_or_else(|| {
+            match prog_iter.next() {
+                Some(op) => (op, num_cycles(op)),
+                None => (&Op::Exit, num_cycles(&Op::Exit)),
+            }
+        });
+
+        samples.push(x);
+
+        if clocks == 1 {
+
+            match op {
+                Op::Exit => break,
+                Op::Noop => { },
+                Op::Addx(val) => { x += val },
+            };
+
+            pc = None;
+        }
+        else {
+            pc = Some((op, clocks - 1));
+        }
+    };
+
+    return samples;
+}
+
 pub fn main() {
     println!("[Day10] Solutions:");
 
@@ -21,56 +64,17 @@ pub fn main() {
         })
         .collect::<Vec<Op>>();
 
-    println!("[Day10] Part 1 => {}", run_part1(&program));
-    //println!("[Day10] Part 2 => {}", run_part2(&lines));
+    let samples = run_program(&program);
+
+    println!("[Day10] Part 1 => {}", run_part1(&samples));
+    println!("[Day10] Part 2 => ");
+    run_part2(&samples).iter()
+        .for_each(|pix| println!("{}", pix));
 
     println!("[Day10] Complete -----------------------");
 }
 
-fn num_cycles(op: &Op) -> usize {
-    match op {
-        Op::Exit => 0,
-        Op::Noop => 1,
-        Op::Addx(_) => 2,
-    }
-}
-
-fn run_part1(program: &Vec<Op>) -> i64 {
-    let mut prog_iter = program.iter();
-    let mut pc: Option<(&Op, usize)> = None;
-    let mut x: i64 = 1;
-    
-    let mut samples: Vec<i64> = Vec::new();
-
-    while let mut current = pc.unwrap_or_else(|| {
-        match prog_iter.next() {
-            Some(op) => (op, num_cycles(op)),
-            None => (&Op::Exit, 0),
-        }
-    })
-
-    {
-        samples.push(x);
-        //println!("[{}][{}] {:?} ({} clocks)", cl, x, current.0, current.1);
-
-        match current.0 {
-            Op::Exit => break,
-            Op::Noop => { pc = None; },
-            Op::Addx(val) => {
-                current.1 -= 1;
-
-                if current.1 == 0 {
-                    x += val;
-                    pc = None;
-                }
-                else {
-                    pc = Some(current);
-                }
-
-            },
-        }
-    }
-
+fn run_part1(samples: &Vec<i64>) -> i64 {
     let pick_cycles = vec![20, 60, 100, 140, 180, 220];
 
     return samples.iter()
@@ -87,6 +91,19 @@ fn run_part1(program: &Vec<Op>) -> i64 {
         .sum();
 }
 
-//fn run_part2(lines: &Vec<&str>) -> usize {
-//    return lines.len();
-//}
+fn run_part2(samples: &Vec<i64>) -> Vec<String> {
+    const WIDTH: usize = 40;
+    const HEIGHT: usize = 6;
+
+    let output = samples[0..(WIDTH * HEIGHT)]
+        .chunks(WIDTH)
+        .map(|w| {
+            w.iter().enumerate().map(|(i, x)| {
+                if (i as i64 - x).abs() <= 1 { "#" } else { "." }
+            })
+            .collect::<String>()
+        })
+        .collect::<Vec<String>>();
+
+    return output;
+}
