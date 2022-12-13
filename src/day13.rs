@@ -1,3 +1,4 @@
+#[derive(Debug)]
 enum Element {
     I(u32),
     List(Vec<Element>),
@@ -23,66 +24,11 @@ pub fn main() {
     println!("[Day13] Complete -----------------------");
 }
 
-fn run_part1(_pairs: &Vec<Pair>) -> usize {
-    let pairs = include_str!("../data/day13.input")
-        .split("\r\n\r\n")
-        .map(|s| s.split_once("\r\n").unwrap())
-        .collect::<Vec<(&str, &str)>>();
+fn run_part1(pairs: &Vec<Pair>) -> usize {
+    pairs.iter()
+        .for_each(|p| println!("{:?}", p));
 
-    let res = pairs.iter().map(|&(first, second)| {
-        let left_nums = first.chars().filter_map(|c| {
-            if c.is_digit(10) {
-                Some(c.to_digit(10).unwrap())
-            }
-            else {
-                None
-            }
-        });
-        let right_nums = second.chars().filter_map(|c| {
-            if c.is_digit(10) {
-                Some(c.to_digit(10).unwrap())
-            }
-            else {
-                None
-            }
-        });
-
-        let order = left_nums.zip(right_nums)
-            .fold(0, |order, (l, r)| {
-
-                if order != 0 {
-                    return order;
-                }
-
-                //println!("Left = {}; Right = {}", l, r);
-                if l == r {
-                    return 0;
-                }
-                else if l < r{
-                    return 1;
-                }
-                else {
-                    return -1;
-                }
-            });
-
-        //println!("Order = {}", order);
-        match order {
-            -1 => return false,
-            0 => return first.len() < second.len(),
-            1 => return true,
-            _ => panic!("INVALID"),
-        }
-    })
-    .collect::<Vec<bool>>();
-
-    //println!("{:?}", res);
-    return res.iter()
-        .enumerate()
-        .filter_map(|(i, &r)| {
-            if r { Some(i+1) } else { None }
-        })
-        .sum();
+    return 0;
 }
 
 //fn run_part2() -> usize {
