@@ -18,13 +18,13 @@ struct Map {
 }
 
 impl Map {
-    pub fn show_map(&self) {
+    pub fn show_map(&self, part2: bool) {
         let (x_min, y_min) = self.min_bounds;
         let (x_max, y_max) = self.max_bounds;
 
-        for y in y_min..=y_max+2 {
+        for y in y_min..=y_max+3 {
             for x in x_min-2..=x_max+2 {
-                let cell = match self.cells.get(&(x, y)) {
+                let cell = match self.get_cell(&(x, y), part2) {
                     Some(c) => {
                         match c {
                             Cell::Spawner => '+',
@@ -32,11 +32,23 @@ impl Map {
                             Cell::Sand => 'o',
                         }
                     },
-                    None => '.',
+                    None => '.', // Part 2
                 };
                 print!("{}", cell);
             }
             println!();
+        }
+    }
+
+    pub fn get_cell(&self, coord: &(u32, u32), part2: bool) -> Option<&Cell> {
+        let &(_, y) = coord;
+        let (_, y_max) = self.max_bounds;
+
+        if y == y_max + 2 && part2 {
+            return Some(&Cell::Stone);
+        }
+        else {
+            return self.cells.get(coord);
         }
     }
 }
@@ -81,12 +93,12 @@ fn build_map(segments: &Vec<Segment>) -> Map {
     return map;
 }
 
-fn find_next_move(map: &Map, current: (u32, u32)) -> Option<(u32, u32)> {
+fn find_next_move(map: &Map, current: (u32, u32), part2: bool) -> Option<(u32, u32)> {
     let (x, y) = current;
     let possible_targets = vec![(x, y+1), (x-1, y+1), (x+1, y+1)];
 
     for p in possible_targets {
-        if let None = map.cells.get(&p) {
+        if let None = map.get_cell(&p, part2) {
             return Some(p);
         }
     }
@@ -96,12 +108,12 @@ fn find_next_move(map: &Map, current: (u32, u32)) -> Option<(u32, u32)> {
     return None;
 }
 
-fn simul_sand(map: &Map, start: (u32, u32)) -> (bool, (u32, u32)) {
+fn simul_sand(map: &Map, start: (u32, u32), part2: bool) -> (bool, (u32, u32)) {
     let (mut x, mut y) = start;
 
     while y < map.max_bounds.1 + 3 {
         //println!("Sand at ({:?}), falling to ({:?})", (x, y), target);
-        match find_next_move(&map, (x, y)) {
+        match find_next_move(&map, (x, y), part2) {
             Some((new_x, new_y)) => {
                 x = new_x;
                 y = new_y;
@@ -123,7 +135,7 @@ fn simul_sand(map: &Map, start: (u32, u32)) -> (bool, (u32, u32)) {
 pub fn main() {
     println!("[Day14] Solutions:");
 
-    let segments = include_str!("../data/day14.example")
+    let segments = include_str!("../data/day14.input")
         .lines().map(|line| {
             line.split(" -> ").map(|e| {
                     let (x, y) = e.split_once(",").unwrap();
@@ -142,7 +154,7 @@ pub fn main() {
 
 fn run_part1(mut map: Map) -> usize {
     for _ in 0..100_000 {
-        let (finished, target) = simul_sand(&map, map.spawn);
+        let (finished, target) = simul_sand(&map, map.spawn, false);
 
         if !finished {
             map.cells.insert(target, Cell::Sand);
@@ -152,7 +164,7 @@ fn run_part1(mut map: Map) -> usize {
         }
     }
 
-    map.show_map();
+    map.show_map(false);
     return map.cells.iter()
         .filter(|&(_, cell)| {
             match cell {
@@ -163,7 +175,25 @@ fn run_part1(mut map: Map) -> usize {
         .count();
 }
 
-fn run_part2(mut _map: Map) -> usize {
-    // Simulate infinite floor at max_bounds.1 + 2
-    return 0;
+fn run_part2(mut map: Map) -> usize {
+    for _ in 0..100_000 {
+        let (finished, target) = simul_sand(&map, map.spawn, true);
+
+        if !finished {
+            map.cells.insert(target, Cell::Sand);
+        }
+        else {
+            break;
+        }
+    }
+
+    map.show_map(true);
+    return map.cells.iter()
+        .filter(|&(_, cell)| {
+            match cell {
+                Cell::Sand => true,
+                _ => false,
+            }
+        })
+        .count() + 1;
 }
