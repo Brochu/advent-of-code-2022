@@ -135,16 +135,46 @@ fn _find_beacon(map: &Map) -> (i64, i64) {
     return (-1, -1);
 }
 
-fn run_part2(map: &Map) -> i64 {
-    let covers = cover_ranges(map, 10);
+fn merge_covers(map: &Map, row: i64) -> Vec<(i64, i64)> {
+    let covers = cover_ranges(map, row);
     let mut ranges = Vec::<(i64, i64)>::new();
-    let mut r = covers.get(0).unwrap().clone();
 
-    for i in 1..covers.len() {
-        let other = covers.get(i).unwrap();
-        println!("{:?} vs. {:?}", r, other);
+    for i in 0..covers.len() {
+        let mut found = false;
+
+        for j in 0..ranges.len() {
+            let (cover_min, cover_max) = covers[i];
+            let (range_min, range_max) = ranges[j];
+
+            if (cover_min >= range_min && cover_min <= range_max) ||
+                (cover_max >= range_min && cover_max <= range_max) {
+
+                ranges.swap_remove(j);
+                ranges.push((cover_min.min(range_min), cover_max.max(range_max)));
+                found = true;
+            }
+        }
+
+        if !found {
+            ranges.push(covers[i].clone());
+        }
     }
 
-    let (beacon_x, beacon_y) = (0, 0);
+    return ranges;
+}
+
+fn find_beacon(map: &Map) -> (i64, i64) {
+    for i in 0..=4_000_000 {
+        let test = merge_covers(map, i);
+        if test.len() > 1 {
+            return (test[0].1 + 1, i);
+        }
+    }
+
+    return (-1, -1);
+}
+
+fn run_part2(map: &Map) -> i64 {
+    let (beacon_x, beacon_y) = find_beacon(map);
     return (beacon_x * 4_000_000) + beacon_y;
 }
