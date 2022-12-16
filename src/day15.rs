@@ -136,16 +136,14 @@ fn _find_beacon(map: &Map) -> (i64, i64) {
 }
 
 fn run_part2(map: &Map) -> i64 {
-    //let (beacon_x, beacon_y) = find_beacon(map);
-    let ranges = cover_ranges(map, 10);
-    ranges.iter()
-        .for_each(|r| println!("{:?}", r));
+    let covers = cover_ranges(map, 10);
+    let mut ranges = Vec::<(i64, i64)>::new();
+    let mut r = covers.get(0).unwrap().clone();
 
-    println!();
-
-    let ranges = cover_ranges(map, 11);
-    ranges.iter()
-        .for_each(|r| println!("{:?}", r));
+    for i in 1..covers.len() {
+        let other = covers.get(i).unwrap();
+        println!("{:?} vs. {:?}", r, other);
+    }
 
     let (beacon_x, beacon_y) = (0, 0);
     return (beacon_x * 4_000_000) + beacon_y;
