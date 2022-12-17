@@ -1,10 +1,21 @@
 use std::fmt::Display;
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 struct Network {
     valves: Vec<Valve>,
     lut: HashMap<String, usize>,
+}
+
+impl Display for Network {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut output = format!("Valve:\n");
+        self.valves.iter().for_each(|v| { output = format!("{}\t{}\n", output, v); });
+
+        output = format!("{}LUT:\n", output);
+        self.lut.iter().for_each(|(name, idx)| { output = format!("{}\t({}) -> {}\n", output, name, idx); });
+
+        write!(f, "{}", output)
+    }
 }
 
 struct Valve {
@@ -16,21 +27,6 @@ struct Valve {
 impl Display for Valve {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Valve {}; Flow {}; tunnels {:?}", self.name, self.flow, self.tunnels)
-    }
-}
-
-#[derive(Clone, Debug)]
-enum Action {
-    Move(String),
-    Open(String),
-}
-
-impl Display for Action {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Action::Move(name) => write!(f, "Move({})", name),
-            Action::Open(name) => write!(f, "Open({})", name),
-        }
     }
 }
 
@@ -57,16 +53,6 @@ fn create_network(input: &str) -> Network {
     return Network { valves, lut }
 }
 
-fn _show_network(net: &Network) {
-    println!("Network:");
-
-    println!("Valves:");
-    net.valves.iter().for_each(|v| println!("\t{v}"));
-
-    println!("LUT:");
-    net.lut.iter().for_each(|(name, idx)| println!("\t({}) -> {}", name, idx));
-}
-
 pub fn main() {
     println!("[Day16] Solutions:");
 
@@ -78,28 +64,63 @@ pub fn main() {
     println!("[Day16] Complete -----------------------");
 }
 
-fn find_best_actions(net: &Network,
-                     mut opened: HashSet<String>,
-                     mut plan: Vec<Action>,
-                     depth: u8,
-                     pressure: u32) -> (Vec<Action>, u32) {
-    if depth >= 30 {
-        return (plan, pressure);
-    }
+fn calc_pressure(net: &Network, open_field: u32) -> u32 {
+    return net.valves.iter()
+        .filter_map(|v| {
+            if (open_field & (1 << net.lut[&v.name])) > 0 { Some(v.flow) }
+            else { None }
+        })
+        .sum();
+}
 
-    plan.push(Action::Move(String::from("AA")));
-    opened.insert(String::from("AA"));
-    return find_best_actions(net, opened, plan, depth+1, pressure);
+fn best_pressure(net: &Network, pos: usize, open_field: u32, time: u32) -> u32 {
+    if time == 0 {
+        return calc_pressure(net, open_field);
+    }
+    else {
+        let v = &net.valves[pos];
+        let on = open_field & (1 << pos) > 0;
+        println!("Current position: {} (on? {})", v, on);
+        println!("\tOpen field: {:#034b}; At time {}", open_field, time);
+
+        // All possible options
+        let mut options = Vec::<u32>::new();
+
+        // If not already on, turn on current valve
+        if !on {
+            options.push(best_pressure(net, pos, open_field | (1 << pos), time - 1));
+        }
+
+        // Visit any neighbours
+        //TODO
+        //v.tunnels.iter()
+        //    .map(|t| net.lut[t])
+        //    .for_each(|idx| println!("\t{}", net.valves[idx]));
+
+        let best = options.iter().max();
+        return match best {
+            Some(&val) => val,
+            None => best_pressure(net, pos, open_field, time-1),
+        };
+    }
 }
 
 fn run_part1(net: &Network) -> u32 {
-    //show_network(net);
+    //println!("{}", net);
 
-    let (plan, pressure) = find_best_actions(net, HashSet::new(), Vec::new(), 0, 0);
-    plan.iter().enumerate().for_each(|(idx, s)| println!("[{}]: {}", idx, s));
-    println!("Pressure: {}", pressure);
+    //let bitset = net.valves.iter()
+    //    .filter_map(|v| {
+    //        if v.flow > 0 { Some(net.lut[&v.name]) }
+    //        else { None }
+    //    })
+    //    .fold(0 as u64, |acc, idx| {
+    //        acc | (1 << idx)
+    //    });
 
-    return 0;
+    let start_pos: usize = net.lut[&String::from("AA")];
+    const INIT_FIELD: u32 = 0;
+    const INIT_TIME: u32 = 30;
+    return best_pressure(net, start_pos, INIT_FIELD, INIT_TIME);
 }
 
 //fn run_part2(network: &Network) -> usize {
