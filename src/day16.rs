@@ -1,6 +1,8 @@
 use std::fmt::Display;
 use std::collections::HashMap;
 
+type Cache = HashMap::<(usize, u64, u64), u64>;
+
 struct Network {
     valves: Vec<Valve>,
     lut: HashMap<String, usize>,
@@ -59,70 +61,78 @@ pub fn main() {
     let network = create_network(include_str!("../data/day16.example"));
 
     println!("[Day16] Part 1 => {}", run_part1(&network));
-    //println!("[Day16] Part 2 => {}", run_part2(&lines));
+    println!("[Day16] Part 2 => {}", run_part2(&network));
 
     println!("[Day16] Complete -----------------------");
 }
 
-fn calc_pressure(net: &Network, open_field: u32) -> u32 {
+fn calc_pressure(net: &Network, open_field: u64) -> u64 {
     return net.valves.iter()
         .filter_map(|v| {
-            if (open_field & (1 << net.lut[&v.name])) > 0 { Some(v.flow) }
+            if (open_field & (1 << net.lut[&v.name])) > 0 { Some(v.flow as u64) }
             else { None }
         })
         .sum();
 }
 
-fn best_pressure(net: &Network, pos: usize, open_field: u32, time: u32) -> u32 {
-    if time == 0 {
-        return calc_pressure(net, open_field);
+fn best_pressure(net: &Network, pos: usize, open_field: u64, time: u64, cache: &mut Cache) -> u64 {
+    if let Some(&val) = cache.get(&(pos, open_field, time)) {
+        return val;
+    }
+
+    if time == 1 {
+        let res = calc_pressure(net, open_field);
+        cache.insert((pos, open_field, time), res);
+        return res;
     }
     else {
         let v = &net.valves[pos];
+        let should_open = v.flow > 0;
         let on = open_field & (1 << pos) > 0;
-        println!("Current position: {} (on? {})", v, on);
-        println!("\tOpen field: {:#034b}; At time {}", open_field, time);
 
-        // All possible options
-        let mut options = Vec::<u32>::new();
+        let mut options = Vec::<u64>::new();
 
-        // If not already on, turn on current valve
-        if !on {
-            options.push(best_pressure(net, pos, open_field | (1 << pos), time - 1));
+        if !on && should_open {
+            options.push(best_pressure(net, pos, open_field | (1 << pos), time-1, cache));
         }
 
-        // Visit any neighbours
-        //TODO
-        //v.tunnels.iter()
-        //    .map(|t| net.lut[t])
-        //    .for_each(|idx| println!("\t{}", net.valves[idx]));
+        v.tunnels.iter()
+            .map(|t| net.lut[t])
+            .for_each(|idx| {
+                options.push(best_pressure(net, idx, open_field, time-1, cache));
+            });
 
-        let best = options.iter().max();
-        return match best {
+        let res = match options.iter().max() {
             Some(&val) => val,
-            None => best_pressure(net, pos, open_field, time-1),
-        };
+            None => best_pressure(net, pos, open_field, time-1, cache),
+        } + calc_pressure(net, open_field);
+
+        cache.insert((pos, open_field, time), res);
+        return res;
     }
 }
 
-fn run_part1(net: &Network) -> u32 {
-    //println!("{}", net);
-
-    //let bitset = net.valves.iter()
-    //    .filter_map(|v| {
-    //        if v.flow > 0 { Some(net.lut[&v.name]) }
-    //        else { None }
-    //    })
-    //    .fold(0 as u64, |acc, idx| {
-    //        acc | (1 << idx)
-    //    });
-
-    let start_pos: usize = net.lut[&String::from("AA")];
-    const INIT_FIELD: u32 = 0;
-    const INIT_TIME: u32 = 30;
-    return best_pressure(net, start_pos, INIT_FIELD, INIT_TIME);
+fn best_pressure_part2(net: &Network, pos: usize, open_field: u64, time: u64, cache: &mut Cache) -> u64{
+    //TODO: Figure out how to adapt this to two actors opening valves
+    return 0;
 }
 
-//fn run_part2(network: &Network) -> usize {
-//    return lines.len();
-//}
+fn run_part1(net: &Network) -> u64 {
+    let start_pos: usize = net.lut[&String::from("AA")];
+    const INIT_FIELD: u64 = 0;
+    const INIT_TIME: u64 = 30;
+    let mut cache = Cache::new();
+
+    return best_pressure(net, start_pos, INIT_FIELD, INIT_TIME, &mut cache);
+}
+
+fn run_part2(net: &Network) -> u64 {
+    //println!("{}", net);
+
+    let start_pos: usize = net.lut[&String::from("AA")];
+    const INIT_FIELD: u64 = 0;
+    const INIT_TIME: u64 = 30;
+    let mut cache = Cache::new();
+
+    return best_pressure_part2(net, start_pos, INIT_FIELD, INIT_TIME, &mut cache);
+}
