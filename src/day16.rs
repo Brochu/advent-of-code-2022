@@ -112,7 +112,7 @@ fn best_pressure(net: &Network, pos: usize, open_field: u64, time: u64, cache: &
     }
 }
 
-fn best_pressure_part2(net: &Network, pos: usize, open_field: u64, time: u64, cache: &mut Cache) -> u64{
+fn best_pressure_part2(_net: &Network, _pos: usize, _open_field: u64, _time: u64, _cache: &mut Cache) -> u64{
     //TODO: Figure out how to adapt this to two actors opening valves
     return 0;
 }

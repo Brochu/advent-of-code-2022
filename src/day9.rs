@@ -26,7 +26,7 @@ impl ToString for Pos {
 //    println!("Head: {}; Tail: {}", head.to_string(), tail.to_string());
 //}
 
-fn show_grid_part2(positions: &[Rc<RefCell<Pos>>], dims: usize) {
+fn _show_grid_part2(positions: &[Rc<RefCell<Pos>>], dims: usize) {
     let mut output = Vec::<char>::new();
     output.resize(dims * dims, '.');
 
