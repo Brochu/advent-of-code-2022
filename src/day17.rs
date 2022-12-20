@@ -6,7 +6,7 @@ enum Direction {
     Right,
 }
 
-type Shape = Vec<(u32, u32)>;
+type Shape = Vec<(i32, i32)>;
 
 pub fn main() {
     println!("[Day17] Solutions:");
@@ -33,12 +33,12 @@ pub fn main() {
     ];
 
     println!("[Day17] Part 1 => {}", run_part1(&push_dirs, &shapes));
-    //println!("[Day17] Part 2 => {}", run_part2());
+    println!("[Day17] Part 2 => {}", run_part2());
 
     println!("[Day17] Complete -----------------------");
 }
 
-fn show_map(status: &HashSet<(u32, u32)>, rock: &Shape, height: u32, width: u32) {
+fn _show_map(status: &HashSet<(i32, i32)>, rock: &Shape, height: i32, width: i32) {
     println!();
 
     for y in (0..height).rev() {
@@ -52,10 +52,53 @@ fn show_map(status: &HashSet<(u32, u32)>, rock: &Shape, height: u32, width: u32)
     println!();
 }
 
-fn run_part1(dirs: &Vec<Direction>, shapes: &Vec<Shape>) -> u32 {
+fn update_rock_pos(status: &HashSet<(i32, i32)>,
+                 rock: &mut Shape,
+                 dir: &Direction,
+                 width: i32) -> bool {
+
+    // Check for collide with walls 0 and width
+    let gas_move = match dir {
+        Direction::Left => {
+            let sides = rock.iter().any(|&(pos_x, _)| pos_x == 0);
+            let rock = sides || rock.iter().any(|&(pos_x, pos_y)| {
+                status.get(&(pos_x-1, pos_y)).is_some()
+            });
+            if sides || rock { 0 } else { -1 }
+        },
+        Direction::Right => {
+            let sides = rock.iter().any(|&(pos_x, _)| pos_x == width - 1);
+            let rock = sides || rock.iter().any(|&(pos_x, pos_y)| {
+                status.get(&(pos_x+1, pos_y)).is_some()
+            });
+            if sides || rock { 0 } else { 1 }
+        },
+    };
+
+    // Move rock based on gas movement
+    rock.iter_mut().for_each(|(pos_x, _)| { *pos_x += gas_move; });
+    
+    //TODO Rock falls
+    //  Check for collide with bottom + other rocks
+    //  Add rock to status when collision happens
+    let reach_bottom = rock.iter().any(|&(_, pos_y)| pos_y == 0);
+    let reach_rock = reach_bottom || rock.iter().any(|&(pos_x, pos_y)| {
+        status.get(&(pos_x, pos_y-1)).is_some()
+    });
+
+    if reach_bottom || reach_rock {
+        return false;
+    }
+    else {
+        rock.iter_mut().for_each(|(_, pos_y)| { *pos_y -= 1; });
+        return true;
+    }
+}
+
+fn run_part1(dirs: &Vec<Direction>, shapes: &Vec<Shape>) -> i32 {
     //println!("{:?}", dirs);
     //println!("{:?}", shapes);
-    //let mut dir_cycle = dirs[0..5].iter().cycle();
+    let mut dir_cycle = dirs.iter().cycle();
     let mut shape_cycle = shapes.iter().cycle();
 
     //for i in 0..15 {
@@ -66,24 +109,34 @@ fn run_part1(dirs: &Vec<Direction>, shapes: &Vec<Shape>) -> u32 {
     //    println!("[{i}] : {:?}", shape_cycle.next().unwrap());
     //}
 
-    const WIDTH: u32 = 7;
-    let mut height: u32 = 8;
-    let mut status = HashSet::<(u32, u32)>::new();
+    const WIDTH: i32 = 7;
+    let mut height: i32 = 0;
+    let mut status = HashSet::<(i32, i32)>::new();
 
-    for _ in 0..1 {
-        let mut rock = shape_cycle.next().unwrap().clone();
-        show_map(&status, &rock, height, WIDTH);
+    for _ in 0..2022 {
+        let mut rock = shape_cycle.next().unwrap().clone()
+            .iter()
+            .map(|&(pos_x, pos_y)| (pos_x, pos_y + height))
+            .collect::<Vec<(i32, i32)>>();
+        //show_map(&status, &rock, height+8, WIDTH);
 
-        //TODO Apply direction push
-        //  Check for collide with walls 0 and 7
-        //TODO Rock falls
-        //  Check for collide with bottom + other rocks
-        //  Add rock to status when collision happens
+        while update_rock_pos(&status, &mut rock, dir_cycle.next().unwrap(), WIDTH) {
+            //show_map(&status, &rock, height+8, WIDTH);
+        }
+
+        rock.iter().for_each(|&p| {
+            status.insert(p);
+        });
+        height = status.iter().map(|&(_, pos_y)| pos_y).max().unwrap() + 1;
+
+        //show_map(&status, &rock, height+8, WIDTH);
     }
 
-    return 0;
+    return height;
 }
 
-//fn run_part2() -> usize {
-//    return 0;
-//}
+fn run_part2() -> usize {
+    //TODO: In order to solve part 2, need to find a cycle that repeats and adds a given height
+    //  Find out how many cycles are left, and calculate the amount of height gained instead of full sim
+    return 0;
+}
