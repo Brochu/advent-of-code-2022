@@ -1,4 +1,9 @@
+use std::collections::HashMap;
+
 type Cost = (u32, u32, u32);
+type Resources = (u32, u32, u32, u32);
+type Robots = (u32, u32, u32, u32);
+type Cache = HashMap<(Robots, Resources), u32>;
 
 struct BP {
     ore_gen_cost: Cost,
@@ -71,21 +76,34 @@ pub fn main() {
     println!("[Day19] Complete -----------------------");
 }
 
-fn optimize_geodes(bp: &BP) -> u64 {
-    println!("Optimizing following blueprint:");
-    println!("\tOre Bot Cost: {:?}", bp.ore_gen_cost);
-    println!("\tClay Bot Cost: {:?}", bp.clay_gen_cost);
-    println!("\tObsidian Bot Cost: {:?}", bp.obsidian_gen_cost);
-    println!("\tGeode Bot Cost: {:?}", bp.geode_gen_cost);
-    println!();
+fn optimize_geodes(bp: &BP, robots: Robots, res: Resources, time: u32, cache: &mut Cache) -> u32 {
+    if let Some(&result) = cache.get(&(robots, res)) {
+        //println!("Cached result: {:?}, {:?}, {}", robots, res,  time);
+        return result;
+    }
 
-    return 0;
+    if time == 0 {
+        //println!("Found new result: {:?}, {:?}, {}", robots, res,  time);
+        return res.3;
+    }
+
+    // Find possibilities for builds
+
+    let max_res = optimize_geodes(bp, robots, res, time-1, cache);
+    cache.insert((robots, res), max_res);
+    return max_res;
 }
 
-fn run_part1(bps: &Vec<BP>) -> u64 {
+fn run_part1(bps: &Vec<BP>) -> u32 {
+    const TIME: u32 = 24;
+    let start_robots: Robots = (1, 0, 0, 0);
+    let start_resources: Resources = (0, 0, 0, 0);
+
     return bps.iter()
-        .map(|bp| {
-            optimize_geodes(bp)
+        .enumerate()
+        .map(|(idx, bp)| {
+            let mut cache = Cache::new();
+            (idx+1) as u32 * optimize_geodes(bp, start_robots, start_resources, TIME, &mut cache)
         })
         .sum();
 }
