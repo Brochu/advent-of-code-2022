@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, vec};
 
 type Cost = (u32, u32, u32);
 type Resources = (u32, u32, u32, u32);
@@ -54,11 +54,18 @@ fn parse_bp(line: &str) -> BP {
     let (clay_str, rest) = rest.split_once(". ").unwrap();
     let (obsidian_str, geode_str) = rest.split_once(". ").unwrap();
 
+    let costs = vec![
+        parse_costs(ore_str),
+        parse_costs(clay_str),
+        parse_costs(obsidian_str),
+        parse_costs(geode_str),
+    ];
+
     return BP {
-        ore_gen_cost: parse_costs(ore_str),
-        clay_gen_cost: parse_costs(clay_str),
-        obsidian_gen_cost: parse_costs(obsidian_str),
-        geode_gen_cost: parse_costs(geode_str),
+        ore_gen_cost: costs[0],
+        clay_gen_cost: costs[1],
+        obsidian_gen_cost: costs[2],
+        geode_gen_cost: costs[3],
     };
 }
 
@@ -77,19 +84,67 @@ pub fn main() {
 }
 
 fn optimize_geodes(bp: &BP, robots: Robots, res: Resources, time: u32, cache: &mut Cache) -> u32 {
-    if let Some(&result) = cache.get(&(robots, res)) {
-        //println!("Cached result: {:?}, {:?}, {}", robots, res,  time);
-        return result;
+    // We already have the result cached
+    if let Some(&result) = cache.get(&(robots, res)) { return result; }
+    // We don't have anymore time, return how many geodes are opened
+    if time == 0 { return res.3; }
+
+    // Robots collect the resources
+    let new_res = (
+        res.0 + robots.0,
+        res.1 + robots.1,
+        res.2 + robots.2,
+        res.3 + robots.3,
+    );
+    let mut max_res: u32 = 0;
+
+    // Can we build an ore robot?
+    if bp.ore_gen_cost.0 <= res.0 && bp.ore_gen_cost.1 <= res.1 && bp.ore_gen_cost.2 <= res.2 {
+        let max = optimize_geodes(bp,
+          (robots.0 + 1, robots.1, robots.2, robots.3),
+          (new_res.0 - bp.ore_gen_cost.0, new_res.1 - bp.ore_gen_cost.1, new_res.2 - bp.ore_gen_cost.2, new_res.3),
+          time-1,
+          cache);
+
+        if max > max_res { max_res = max }
     }
 
-    if time == 0 {
-        //println!("Found new result: {:?}, {:?}, {}", robots, res,  time);
-        return res.3;
+    // Can we build a clay robot
+    if bp.clay_gen_cost.0 <= res.0 && bp.clay_gen_cost.1 <= res.1 && bp.clay_gen_cost.2 <= res.2 {
+        let max = optimize_geodes(bp,
+          (robots.0, robots.1 + 1, robots.2, robots.3),
+          (new_res.0 - bp.clay_gen_cost.0, new_res.1 - bp.clay_gen_cost.1, new_res.2 - bp.clay_gen_cost.2, new_res.3),
+          time-1,
+          cache);
+
+        if max > max_res { max_res = max }
     }
 
-    // Find possibilities for builds
+    // Can we build a obsidian robot
+    if bp.obsidian_gen_cost.0 <= res.0 && bp.obsidian_gen_cost.1 <= res.1 && bp.obsidian_gen_cost.2 <= res.2 {
+        let max = optimize_geodes(bp,
+          (robots.0, robots.1, robots.2 + 1, robots.3),
+          (new_res.0 - bp.obsidian_gen_cost.0, new_res.1 - bp.obsidian_gen_cost.1, new_res.2 - bp.obsidian_gen_cost.2, new_res.3),
+          time-1,
+          cache);
 
-    let max_res = optimize_geodes(bp, robots, res, time-1, cache);
+        if max > max_res { max_res = max }
+    }
+
+    // Can we build a geode robot
+    if bp.geode_gen_cost.0 <= res.0 && bp.geode_gen_cost.1 <= res.1 && bp.geode_gen_cost.2 <= res.2 {
+        let max = optimize_geodes(bp,
+          (robots.0, robots.1, robots.2, robots.3 + 1),
+          (new_res.0 - bp.geode_gen_cost.0, new_res.1 - bp.geode_gen_cost.1, new_res.2 - bp.geode_gen_cost.2, new_res.3),
+          time-1,
+          cache);
+
+        if max > max_res { max_res = max }
+    }
+
+    let max = optimize_geodes(bp, robots, new_res, time-1, cache);
+    if max > max_res { max_res = max }
+
     cache.insert((robots, res), max_res);
     return max_res;
 }
@@ -99,7 +154,8 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
     let start_robots: Robots = (1, 0, 0, 0);
     let start_resources: Resources = (0, 0, 0, 0);
 
-    return bps.iter()
+    //TODO: Solution works, but is too slow for real input
+    return bps[0..1].iter()
         .enumerate()
         .map(|(idx, bp)| {
             let mut cache = Cache::new();
