@@ -1,9 +1,6 @@
-use std::{collections::HashMap, vec};
-
 type Cost = (u32, u32, u32);
 type Resources = (u32, u32, u32, u32);
 type Robots = (u32, u32, u32, u32);
-type Cache = HashMap<(Robots, Resources), u32>;
 
 struct BP {
     ore_gen_cost: Cost,
@@ -83,70 +80,77 @@ pub fn main() {
     println!("[Day19] Complete -----------------------");
 }
 
-fn optimize_geodes(bp: &BP, robots: Robots, res: Resources, time: u32, cache: &mut Cache) -> u32 {
-    // We already have the result cached
-    if let Some(&result) = cache.get(&(robots, res)) { return result; }
-    // We don't have anymore time, return how many geodes are opened
-    if time == 0 { return res.3; }
+fn time_until(cost: &Cost, robots: &Robots, res: &Resources) -> u32 {
+    let mut turns = 0;
 
-    // Robots collect the resources
+    if robots.0 > 0 {
+        let diff = cost.0 - res.0;
+        println!("{} - {}", cost.0, res.0);
+        let l_turns = diff / robots.0;
+        println!("{} / {}", diff, robots.0);
+
+        if l_turns > turns {  turns = l_turns }
+    }
+
+    if robots.1 > 0 {
+        let diff = cost.1 - res.1;
+        println!("{} - {}", cost.1, res.1);
+        let l_turns = diff / robots.1;
+        println!("{} / {}", diff, robots.1);
+
+        if l_turns > turns {  turns = l_turns }
+    }
+
+    if robots.2 > 0 {
+        let diff = cost.2 - res.2;
+        println!("{} - {}", cost.2, res.2);
+        let l_turns = diff / robots.2;
+        println!("{} / {}", diff, robots.2);
+
+        if l_turns > turns {  turns = l_turns }
+    }
+
+    return turns;
+}
+
+fn sim_turns(bp: &BP, idx: u32, robots: &Robots, res: &Resources, t: u32) -> (Robots, Resources) {
+    let cost = match idx {
+        0 => bp.ore_gen_cost,
+        1 => bp.clay_gen_cost,
+        2 => bp.obsidian_gen_cost,
+        3 => bp.geode_gen_cost,
+        _ => panic!("Invalid robot type"),
+    };
     let new_res = (
-        res.0 + robots.0,
-        res.1 + robots.1,
-        res.2 + robots.2,
-        res.3 + robots.3,
+        robots.0 * t + res.0 - cost.0,
+        robots.1 * t + res.1 - cost.1,
+        robots.2 * t + res.2 - cost.2,
+        robots.3 * t + res.3,
     );
-    let mut max_res: u32 = 0;
 
-    // Can we build an ore robot?
-    if bp.ore_gen_cost.0 <= res.0 && bp.ore_gen_cost.1 <= res.1 && bp.ore_gen_cost.2 <= res.2 {
-        let max = optimize_geodes(bp,
-          (robots.0 + 1, robots.1, robots.2, robots.3),
-          (new_res.0 - bp.ore_gen_cost.0, new_res.1 - bp.ore_gen_cost.1, new_res.2 - bp.ore_gen_cost.2, new_res.3),
-          time-1,
-          cache);
+    let new_robots = match idx {
+        0 => (robots.0+1, robots.1, robots.2, robots.3),
+        1 => (robots.0, robots.1+1, robots.2, robots.3),
+        2 => (robots.0, robots.1, robots.2+1, robots.3),
+        3 => (robots.0, robots.1, robots.2, robots.3+1),
+        _ => panic!("Could not simulate for this robot type"),
+    };
 
-        if max > max_res { max_res = max }
+    return (new_robots, new_res);
+}
+
+fn optimize_geodes(bp: &BP, robots: &Robots, res: &Resources, time: u32) -> u32 {
+    let t = time_until(&bp.clay_gen_cost, robots, res) + 1;
+    println!("Robots: {:?}, Resources: {:?}", robots, res);
+    println!("Time: {}, t: {}", time, t);
+
+    let mut results = Vec::new();
+    if t <= time {
+        let (rob, r) = sim_turns(&bp, 1, &robots, &res, t);
+        results.push(optimize_geodes(bp, &rob, &r, time-t));
     }
 
-    // Can we build a clay robot
-    if bp.clay_gen_cost.0 <= res.0 && bp.clay_gen_cost.1 <= res.1 && bp.clay_gen_cost.2 <= res.2 {
-        let max = optimize_geodes(bp,
-          (robots.0, robots.1 + 1, robots.2, robots.3),
-          (new_res.0 - bp.clay_gen_cost.0, new_res.1 - bp.clay_gen_cost.1, new_res.2 - bp.clay_gen_cost.2, new_res.3),
-          time-1,
-          cache);
-
-        if max > max_res { max_res = max }
-    }
-
-    // Can we build a obsidian robot
-    if bp.obsidian_gen_cost.0 <= res.0 && bp.obsidian_gen_cost.1 <= res.1 && bp.obsidian_gen_cost.2 <= res.2 {
-        let max = optimize_geodes(bp,
-          (robots.0, robots.1, robots.2 + 1, robots.3),
-          (new_res.0 - bp.obsidian_gen_cost.0, new_res.1 - bp.obsidian_gen_cost.1, new_res.2 - bp.obsidian_gen_cost.2, new_res.3),
-          time-1,
-          cache);
-
-        if max > max_res { max_res = max }
-    }
-
-    // Can we build a geode robot
-    if bp.geode_gen_cost.0 <= res.0 && bp.geode_gen_cost.1 <= res.1 && bp.geode_gen_cost.2 <= res.2 {
-        let max = optimize_geodes(bp,
-          (robots.0, robots.1, robots.2, robots.3 + 1),
-          (new_res.0 - bp.geode_gen_cost.0, new_res.1 - bp.geode_gen_cost.1, new_res.2 - bp.geode_gen_cost.2, new_res.3),
-          time-1,
-          cache);
-
-        if max > max_res { max_res = max }
-    }
-
-    let max = optimize_geodes(bp, robots, new_res, time-1, cache);
-    if max > max_res { max_res = max }
-
-    cache.insert((robots, res), max_res);
-    return max_res;
+    return 0;
 }
 
 fn run_part1(bps: &Vec<BP>) -> u32 {
@@ -154,12 +158,10 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
     let start_robots: Robots = (1, 0, 0, 0);
     let start_resources: Resources = (0, 0, 0, 0);
 
-    //TODO: Solution works, but is too slow for real input
     return bps[0..1].iter()
         .enumerate()
         .map(|(idx, bp)| {
-            let mut cache = Cache::new();
-            (idx+1) as u32 * optimize_geodes(bp, start_robots, start_resources, TIME, &mut cache)
+            (idx+1) as u32 * optimize_geodes(bp, &start_robots, &start_resources, TIME)
         })
         .sum();
 }
