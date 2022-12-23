@@ -13,6 +13,14 @@ enum Tile {
     Wall,
 }
 
+#[derive(Copy, Clone, Debug)]
+enum Facing {
+    North,
+    East,
+    West,
+    South,
+}
+
 type Map = HashMap<(u32, u32), Tile>;
 
 fn build_map(map_str: &str) -> Map {
@@ -74,12 +82,61 @@ pub fn main() {
     println!("[Day22] Complete -----------------------");
 }
 
+fn display_elf(pos: &(u32, u32), facing: Facing) {
+    let c = match facing {
+        Facing::North => '^',
+        Facing::East => '>',
+        Facing::West => '<',
+        Facing::South => '^',
+    };
+
+    println!("Elf Position: {:?}\nElf Facing: {}", pos, c);
+}
+
+fn turn_elf(facing: Facing, cmd: Cmd) -> Facing {
+    return match facing {
+        Facing::North => {
+            match cmd {
+                Cmd::Left => Facing::West,
+                Cmd::Right => Facing::East,
+                Cmd::Forward(_) => facing,
+            }
+        },
+        Facing::East => {
+            match cmd {
+                Cmd::Left => Facing::North,
+                Cmd::Right => Facing::South,
+                Cmd::Forward(_) => facing,
+            }
+        },
+        Facing::West => {
+            match cmd {
+                Cmd::Left => Facing::South,
+                Cmd::Right => Facing::North,
+                Cmd::Forward(_) => facing,
+            }
+        },
+        Facing::South => {
+            match cmd {
+                Cmd::Left => Facing::East,
+                Cmd::Right => Facing::West,
+                Cmd::Forward(_) => facing,
+            }
+        },
+    }
+}
+
 fn run_part1(map: &Map, cmds: &Vec<Cmd>) -> u32 {
     println!("{:?}", map);
+    let pos: (u32, u32) = (0, 0);
+    let facing = Facing::East;
 
     println!();
     cmds.iter()
         .for_each(|c| println!("{:?}", c));
+    println!();
+
+    display_elf(&pos, facing);
     println!();
 
     return 0;
