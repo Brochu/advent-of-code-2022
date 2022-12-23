@@ -23,6 +23,17 @@ enum Facing {
 
 type Map = HashMap<(u32, u32), Tile>;
 
+fn find_start(map: &Map) -> (u32, u32) {
+    return map.iter()
+        .filter(|(&(_, y), _)| y == 0)
+        .fold((u32::MAX, 0), |mut start, (&(x, _), _)| {
+            if x < start.0 {
+                start.0 = x;
+            }
+            start
+        });
+}
+
 fn build_map(map_str: &str) -> Map {
     return map_str.lines().enumerate()
         .flat_map(|(y, line)| {
@@ -82,17 +93,6 @@ pub fn main() {
     println!("[Day22] Complete -----------------------");
 }
 
-fn display_elf(pos: &(u32, u32), facing: Facing) {
-    let c = match facing {
-        Facing::North => '^',
-        Facing::East => '>',
-        Facing::West => '<',
-        Facing::South => '^',
-    };
-
-    println!("Elf Position: {:?}\nElf Facing: {}", pos, c);
-}
-
 fn turn_elf(facing: Facing, cmd: Cmd) -> Facing {
     return match facing {
         Facing::North => {
@@ -126,19 +126,22 @@ fn turn_elf(facing: Facing, cmd: Cmd) -> Facing {
     }
 }
 
+fn apply_command(pos: &mut (u32, u32), facing: &mut Facing, cmd: &Cmd) {
+}
+
 fn run_part1(map: &Map, cmds: &Vec<Cmd>) -> u32 {
-    println!("{:?}", map);
-    let pos: (u32, u32) = (0, 0);
-    let facing = Facing::East;
+    let pos = find_start(map);
+    let facing = Facing::West;
+    println!("\nStarting:\n\tpos: {:?}\n\tface: {:?}", pos, facing);
 
-    println!();
-    cmds.iter()
-        .for_each(|c| println!("{:?}", c));
-    println!();
+    let (end_pos, end_facing) = cmds.iter()
+        .fold((pos, facing), |(mut  p, mut f), cmd| {
+            apply_command(&mut p, &mut f, cmd);
+            (p, f)
+        });
 
-    display_elf(&pos, facing);
+    println!("\nEnd:\n\tpos: {:?}\n\tface: {:?}", end_pos, end_facing);
     println!();
-
     return 0;
 }
 
