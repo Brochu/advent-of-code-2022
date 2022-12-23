@@ -126,22 +126,67 @@ fn turn_elf(facing: Facing, cmd: Cmd) -> Facing {
     }
 }
 
-fn apply_command(pos: &mut (u32, u32), facing: &mut Facing, cmd: &Cmd) {
+fn find_next_tile(map: &Map, pos: &(u32, u32), facing: &Facing) -> ((u32, u32), Tile) {
+    let &(curr_x, curr_y) = pos;
+    let next_pos = match facing {
+        Facing::North => (curr_x, curr_y + 1),
+        Facing::East => (curr_x + 1, curr_y),
+        Facing::West => (curr_x - 1, curr_y),
+        Facing::South => (curr_x, curr_y - 1),
+    };
+
+    match map.get(&next_pos) {
+        Some(&tile) => {
+            (next_pos, tile)
+        },
+        None => {
+            // Need to wrap the position around based on facing
+            (next_pos, Tile::Air)
+        },
+    }
+}
+
+fn apply_command(map: &Map, pos: &mut (u32, u32), facing: &mut Facing, cmd: &Cmd) {
+    println!("Applying cmd: {:?}; from: {:?}, {:?}", cmd, pos, facing);
+
+    if let &Cmd::Forward(dist) = cmd {
+        println!("Move elf forward for {} steps", dist);
+
+        for _ in 0..dist {
+            let (next_pos, next_tile) = find_next_tile(map, pos, facing);
+
+            match next_tile {
+                Tile::Air => {
+                    println!("Next pos: {:?}", next_pos);
+                    // Update pos
+                },
+                Tile::Wall => {
+                    // Hit a wall, start next cmd
+                    break;
+                }
+            };
+        }
+    }
+    else {
+        *facing = turn_elf(*facing, *cmd);
+    }
 }
 
 fn run_part1(map: &Map, cmds: &Vec<Cmd>) -> u32 {
     let pos = find_start(map);
-    let facing = Facing::West;
+    let facing = Facing::East;
     println!("\nStarting:\n\tpos: {:?}\n\tface: {:?}", pos, facing);
+    println!();
 
-    let (end_pos, end_facing) = cmds.iter()
+    let (_end_pos, _end_facing) = cmds[0..1].iter()
         .fold((pos, facing), |(mut  p, mut f), cmd| {
-            apply_command(&mut p, &mut f, cmd);
+            apply_command(map, &mut p, &mut f, cmd);
+            println!("Pos: {:?}; Facing: {:?}", p, f);
+            println!();
+
             (p, f)
         });
 
-    println!("\nEnd:\n\tpos: {:?}\n\tface: {:?}", end_pos, end_facing);
-    println!();
     return 0;
 }
 
