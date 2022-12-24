@@ -161,8 +161,7 @@ fn apply_command(map: &Map, pos: &mut (u32, u32), facing: &mut Facing, cmd: &Cmd
                     // Update pos
                 },
                 Tile::Wall => {
-                    // Hit a wall, start next cmd
-                    break;
+                    break; // Hit a wall, start next cmd
                 }
             };
         }
