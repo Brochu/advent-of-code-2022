@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 #[derive(Copy, Clone, Debug)]
 enum Cmd {
-    Forward(u32),
+    Forward(i32),
     Left,
     Right,
 }
@@ -21,12 +21,12 @@ enum Facing {
     South,
 }
 
-type Map = HashMap<(u32, u32), Tile>;
+type Map = HashMap<(i32, i32), Tile>;
 
-fn find_start(map: &Map) -> (u32, u32) {
+fn find_start(map: &Map) -> (i32, i32) {
     return map.iter()
         .filter(|(&(_, y), _)| y == 0)
-        .fold((u32::MAX, 0), |mut start, (&(x, _), _)| {
+        .fold((i32::MAX, 0), |mut start, (&(x, _), _)| {
             if x < start.0 {
                 start.0 = x;
             }
@@ -42,8 +42,8 @@ fn build_map(map_str: &str) -> Map {
                 .filter_map(move |(x, c)| {
 
                     match c {
-                        '.' => Some(((x as u32, y as u32), Tile::Air)),
-                        '#' => Some(((x as u32, y as u32), Tile::Wall)),
+                        '.' => Some(((x as i32, y as i32), Tile::Air)),
+                        '#' => Some(((x as i32, y as i32), Tile::Wall)),
                         _ => None,
                     }
                 })
@@ -61,7 +61,7 @@ fn build_cmds(cmds_str: &str) -> Vec<Cmd> {
                 num_str.push(c);
             }
             else {
-                cmds.push(Cmd::Forward(num_str.parse::<u32>().unwrap()));
+                cmds.push(Cmd::Forward(num_str.parse::<i32>().unwrap()));
                 num_str.clear();
 
                 match c {
@@ -74,7 +74,7 @@ fn build_cmds(cmds_str: &str) -> Vec<Cmd> {
         });
 
     if num_str.len() > 0 {
-        cmds.push(Cmd::Forward(num_str.parse::<u32>().unwrap()));
+        cmds.push(Cmd::Forward(num_str.parse::<i32>().unwrap()));
     }
 
     return cmds;
@@ -83,7 +83,7 @@ fn build_cmds(cmds_str: &str) -> Vec<Cmd> {
 pub fn main() {
     println!("[Day22] Solutions:");
 
-    let (map_str, cmds_str) = include_str!("../data/day22.example").split_once("\r\n\r\n").unwrap();
+    let (map_str, cmds_str) = include_str!("../data/day22.input").split_once("\r\n\r\n").unwrap();
     let map = build_map(map_str);
     let cmds = build_cmds(cmds_str);
 
@@ -126,13 +126,13 @@ fn turn_elf(facing: Facing, cmd: Cmd) -> Facing {
     }
 }
 
-fn find_next_tile(map: &Map, pos: &(u32, u32), facing: &Facing) -> ((u32, u32), Tile) {
+fn find_next_tile(map: &Map, pos: &(i32, i32), facing: &Facing) -> ((i32, i32), Tile) {
     let &(curr_x, curr_y) = pos;
     let next_pos = match facing {
-        Facing::North => (curr_x, curr_y + 1),
+        Facing::North => (curr_x, curr_y - 1),
         Facing::East => (curr_x + 1, curr_y),
         Facing::West => (curr_x - 1, curr_y),
-        Facing::South => (curr_x, curr_y - 1),
+        Facing::South => (curr_x, curr_y + 1),
     };
 
     match map.get(&next_pos) {
@@ -140,25 +140,71 @@ fn find_next_tile(map: &Map, pos: &(u32, u32), facing: &Facing) -> ((u32, u32), 
             (next_pos, tile)
         },
         None => {
-            // Need to wrap the position around based on facing
-            (next_pos, Tile::Air)
+            match *facing {
+                Facing::North => {
+                    let mut y = 0;
+                    let mut t = Tile::Air;
+                    for c_y in 0..200 {
+                        if let Some(&tile) = map.get(&(next_pos.0, c_y)) {
+                            y = c_y;
+                            t = tile;
+                        }
+                    }
+                    ((next_pos.0, y), t)
+                },
+                Facing::East => {
+                    let mut x = 0;
+                    let mut t = Tile::Air;
+                    for c_x in 0..next_pos.0 {
+                        if let Some(&tile) = map.get(&(c_x, next_pos.1)) {
+                            x = c_x;
+                            t = tile;
+                            break;
+                        }
+                    }
+                    ((x, next_pos.1), t)
+                },
+                Facing::West => {
+                    let mut x = 0;
+                    let mut t = Tile::Air;
+                    for c_x in 0..150 {
+                        if let Some(&tile) = map.get(&(c_x, next_pos.1)) {
+                            x = c_x;
+                            t = tile;
+                        }
+                    }
+                    ((x, next_pos.1), t)
+                },
+                Facing::South => {
+                    let mut y = 0;
+                    let mut t = Tile::Air;
+                    for c_y in 0..next_pos.1 {
+                        if let Some(&tile) = map.get(&(next_pos.0, c_y)) {
+                            y = c_y;
+                            t = tile;
+                            break;
+                        }
+                    }
+                    ((next_pos.0, y), t)
+                },
+            }
         },
     }
 }
 
-fn apply_command(map: &Map, pos: &mut (u32, u32), facing: &mut Facing, cmd: &Cmd) {
-    println!("Applying cmd: {:?}; from: {:?}, {:?}", cmd, pos, facing);
+fn apply_command(map: &Map, pos: &mut (i32, i32), facing: &mut Facing, cmd: &Cmd) {
+    //println!("Applying cmd: {:?}; from: {:?}, {:?}", cmd, pos, facing);
 
     if let &Cmd::Forward(dist) = cmd {
-        println!("Move elf forward for {} steps", dist);
+        //println!("Move elf forward for {} steps", dist);
 
         for _ in 0..dist {
             let (next_pos, next_tile) = find_next_tile(map, pos, facing);
 
             match next_tile {
                 Tile::Air => {
-                    println!("Next pos: {:?}", next_pos);
-                    // Update pos
+                    //println!("Next pos: {:?}", next_pos);
+                    *pos = next_pos;
                 },
                 Tile::Wall => {
                     break; // Hit a wall, start next cmd
@@ -171,22 +217,28 @@ fn apply_command(map: &Map, pos: &mut (u32, u32), facing: &mut Facing, cmd: &Cmd
     }
 }
 
-fn run_part1(map: &Map, cmds: &Vec<Cmd>) -> u32 {
+fn run_part1(map: &Map, cmds: &Vec<Cmd>) -> i32 {
     let pos = find_start(map);
     let facing = Facing::East;
-    println!("\nStarting:\n\tpos: {:?}\n\tface: {:?}", pos, facing);
-    println!();
+    //println!("\nStarting:\n\tpos: {:?}\n\tface: {:?}", pos, facing);
+    //println!();
 
-    let (_end_pos, _end_facing) = cmds[0..1].iter()
+    let ((column, row), end_facing) = cmds.iter()
         .fold((pos, facing), |(mut  p, mut f), cmd| {
             apply_command(map, &mut p, &mut f, cmd);
-            println!("Pos: {:?}; Facing: {:?}", p, f);
-            println!();
+            //println!("Pos: {:?}; Facing: {:?}", p, f);
+            //println!();
 
             (p, f)
         });
 
-    return 0;
+    let password = ((row+1) * 1000) + ((column+1) * 4) + match end_facing {
+        Facing::North => 3,
+        Facing::East => 0,
+        Facing::West => 2,
+        Facing::South => 1,
+    };
+    return password;
 }
 
 //fn run_part2() -> usize {
