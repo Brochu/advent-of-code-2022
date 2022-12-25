@@ -13,7 +13,7 @@ enum Position {
 pub fn main() {
     println!("[Day23] Solutions:");
 
-    let elves = include_str!("../data/day23.input").lines().enumerate()
+    let elves = include_str!("../data/day23.example").lines().enumerate()
         .flat_map(|(y, line)| {
             line.chars().enumerate()
                 .filter_map(move |(x, c)| {
@@ -66,17 +66,12 @@ fn is_elf_done(elf: &Elf, lut: &Lut) -> bool {
 fn potential_move(elf: &Elf, lut: &Lut, rules: &Vec<Vec<Position>>, r: usize) -> (i32, i32) {
     for i in 0..rules.len() {
         let rule = &rules[(i + r) % rules.len()];
-        //print!("[{r}] Looking at rule :");
-        //rule.iter().for_each(|c| print!("{:?}, ", c));
-        //println!();
 
         let positions = expand_positions(elf, rule);
         if positions.iter().all(|p| !lut.contains(p)) {
-            //println!();
             return *positions.first().unwrap();
         }
     }
-    //println!();
 
     return (0, 0);
 }
