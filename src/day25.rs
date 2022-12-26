@@ -6,7 +6,6 @@ pub fn main() {
         .collect::<Vec<&str>>();
 
     println!("[Day25] Part 1 => Number: {}", run_part1(&snafu_nums));
-    //println!("[Day25] Part 2 => {}", run_part2());
 
     println!("[Day25] Complete -----------------------");
 }
@@ -75,7 +74,3 @@ fn run_part1(snafu_nums: &Vec<&str>) -> String {
 
     return dec_to_snafu(dec_sum);
 }
-
-//fn run_part2() -> i64 {
-//    return 0;
-//}
