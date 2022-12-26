@@ -130,18 +130,18 @@ fn best_pressure_part2(net: &Network, my_pos: usize, ele_pos: usize, open_field:
         let mut options = Vec::<u64>::new();
 
         if !on && should_open {
-            options.push(best_pressure(net, my_pos, open_field | (1 << my_pos), time-1, cache));
+            options.push(best_pressure_part2(net, my_pos, ele_pos, open_field | (1 << my_pos), time-1, cache));
         }
 
         v.tunnels.iter()
             .map(|t| net.lut[t])
             .for_each(|idx| {
-                options.push(best_pressure(net, idx, open_field, time-1, cache));
+                options.push(best_pressure_part2(net, idx, ele_pos, open_field, time-1, cache));
             });
 
         let res = match options.iter().max() {
             Some(&val) => val,
-            None => best_pressure(net, my_pos, open_field, time-1, cache),
+            None => best_pressure_part2(net, my_pos, ele_pos, open_field, time-1, cache),
         } + calc_pressure(net, open_field);
 
         cache.insert((my_pos, open_field, time), res);
