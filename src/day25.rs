@@ -1,7 +1,7 @@
 pub fn main() {
     println!("[Day25] Solutions:");
 
-    let snafu_nums = include_str!("../data/day25.example")
+    let snafu_nums = include_str!("../data/day25.input")
         .lines()
         .collect::<Vec<&str>>();
 
@@ -27,7 +27,7 @@ fn snafu_to_dec(snafu: &str) -> i64 {
             acc + (val * pos)
         });
 
-    println!("Converting from (snafu): '{}' to (decimal): {}", snafu, dec);
+    //println!("Converting from (snafu): '{}' to (decimal): {}", snafu, dec);
     return dec;
 }
 
@@ -39,11 +39,30 @@ fn dec_to_snafu(mut dec: i64) -> String {
     }
 
     let (snafu, rest) = base5.iter()
-        .fold((String::new(), 0), |(mut snafu, mut rest), num| {
-            (snafu, rest)
+        .fold((String::new(), 0 as u8), |(snafu, rest), &num| {
+            //println!("Handling {}, (snafu: {}, rest: {})", num, snafu, rest);
+            match num + rest {
+                0 => (format!("{}{}", '0', snafu), 0),
+                1 => (format!("{}{}", '1', snafu), 0),
+                2 => (format!("{}{}", '2', snafu), 0),
+                3 => (format!("{}{}", '=', snafu), 1),
+                4 => (format!("{}{}", '-', snafu), 1),
+                5 => (format!("{}{}", '0', snafu), 1),
+                6 => (format!("{}{}", '1', snafu), 1),
+                7 => (format!("{}{}", '2', snafu), 1),
+                8 => (format!("{}{}", '=', snafu), 2),
+                9 => (format!("{}{}", '-', snafu), 2),
+                _ => panic!("Invalid digit for base5"),
+            }
         });
 
-    return String::from("''");
+    if rest > 0 {
+        //TODO: Need to handle leftover rest
+        panic!("Leftover rest");
+    }
+
+    //println!("{}; {}", snafu, rest);
+    return snafu;
 }
 
 fn run_part1(snafu_nums: &Vec<&str>) -> String {
@@ -51,8 +70,8 @@ fn run_part1(snafu_nums: &Vec<&str>) -> String {
         .map(|n| snafu_to_dec(n))
         .sum();
 
-    println!();
-    println!("Sum (in decimal): {}", dec_sum);
+    //println!();
+    //println!("Sum (in decimal): {}", dec_sum);
 
     return dec_to_snafu(dec_sum);
 }
