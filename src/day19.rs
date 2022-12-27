@@ -1,14 +1,14 @@
 use std::fmt::Display;
 
 struct BP {
-    or_c: u8,
-    cl_c: u8,
-    ob_or_c: u8, ob_cl_c: u8,
-    ge_or_c: u8, ge_ob_c: u8,
+    or_c: u32,
+    cl_c: u32,
+    ob_or_c: u32, ob_cl_c: u32,
+    ge_or_c: u32, ge_ob_c: u32,
 
-    or_m: u8,
-    cl_m: u8,
-    ob_m: u8,
+    or_m: u32,
+    cl_m: u32,
+    ob_m: u32,
 }
 
 impl Display for BP {
@@ -67,9 +67,9 @@ fn parse_blueprint(bp_str: &str) -> BP {
 }
 
 struct State {
-    or: u8, cl: u8, ob: u8, ge: u8,
-    or_r: u8, cl_r: u8, ob_r: u8, ge_r: u8,
-    time: u8,
+    or: u32, cl: u32, ob: u32, ge: u32,
+    or_r: u32, cl_r: u32, ob_r: u32, ge_r: u32,
+    time: u32,
 }
 
 impl Display for State {
@@ -96,30 +96,6 @@ pub fn main() {
     println!("[Day19] Complete -----------------------");
 }
 
-fn check_ore(b: &BP, s: &State) -> (bool, u8) {
-    if s.or_r < b.or_m {
-        let mut t = 0;
-        if s.or < b.or_c { t = (b.or_c - s.or) / s.or_r; }
-
-        return (true, t + 1);
-    }
-    else {
-        return (false, 0);
-    }
-}
-
-fn check_clay(b: &BP, s: &State) -> (bool, u8) {
-    if s.cl_r < b.cl_m {
-        let mut t = 0;
-        if s.or < b.cl_c { t = (b.cl_c - s.or) / s.or_r; }
-
-        return (true, t + 1);
-    }
-    else {
-        return (false, 0);
-    }
-}
-
 fn run_part1(bps: &Vec<BP>) -> u32 {
     let mut quality_sum: u32 = 0;
 
@@ -140,30 +116,6 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
                 // This branch is over
                 if state.ge as u32 > bp_max { bp_max = state.ge as u32 }
                 continue;
-            }
-
-            let (build_ore, t_ore) = check_ore(bp, &state);
-            if build_ore {
-                stack.push(State {
-                    or: state.or + (state.or_r * t_ore) - bp.or_c,
-                    cl: state.cl + (state.cl_r & t_ore),
-                    ob: state.ob + (state.ob_r & t_ore),
-                    ge: state.ge + (state.ge_r & t_ore),
-                    or_r: state.or_r + 1, cl_r: state.cl_r, ob_r: state.ob_r, ge_r: state.ge_r,
-                    time: state.time + t_ore,
-                })
-            }
-
-            let (build_clay, t_clay) = check_clay(bp, &state);
-            if build_clay {
-                stack.push(State {
-                    or: state.or + (state.or_r * t_clay) - bp.cl_c,
-                    cl: state.cl + (state.cl_r & t_clay),
-                    ob: state.ob + (state.ob_r & t_clay),
-                    ge: state.ge + (state.ge_r & t_clay),
-                    or_r: state.or_r, cl_r: state.cl_r + 1, ob_r: state.ob_r, ge_r: state.ge_r,
-                    time: state.time + t_clay,
-                })
             }
         }
 
