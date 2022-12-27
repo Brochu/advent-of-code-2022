@@ -1,37 +1,24 @@
 use std::fmt::Display;
 
-#[derive(Debug)]
-enum Robot {
-    Ore,
-    Clay,
-    Obsidian,
-    Geode,
-}
-
 struct BP {
-    ore_robot_cost: u8,
+    or_c: u8,
+    cl_c: u8,
+    ob_or_c: u8, ob_cl_c: u8,
+    ge_or_c: u8, ge_ob_c: u8,
 
-    clay_robot_cost: u8,
-
-    obs_robot_ore_cost: u8,
-    obs_robot_clay_cost: u8,
-
-    geo_robot_ore_cost: u8,
-    geo_robot_obs_cost: u8,
+    or_m: u8,
+    cl_m: u8,
+    ob_m: u8,
 }
 
 impl Display for BP {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Blueprint:\n\tOre robot cost = {}\n\tClay robot cost = {}\n\tObsidian robot costs = {}, {}\n\tGeode robot costs = {}, {}", 
-            self.ore_robot_cost,
-
-            self.clay_robot_cost,
-
-            self.obs_robot_ore_cost,
-            self.obs_robot_clay_cost,
-
-            self.geo_robot_ore_cost,
-            self.geo_robot_obs_cost,
+        write!(f, "Blueprint:\n\tOre robot cost = {}\n\tClay robot cost = {}\n\tObsidian robot costs = {}, {}\n\tGeode robot costs = {}, {}\n\tMax = {}, {}, {}", 
+            self.or_c,
+            self.cl_c,
+            self.ob_or_c, self.ob_cl_c,
+            self.ge_or_c, self.ge_ob_c,
+            self.or_m, self.cl_m, self.ob_m,
         )
     }
 }
@@ -60,30 +47,28 @@ fn parse_blueprint(bp_str: &str) -> BP {
     let (ore_cost_2, _) = ore_cost_2.split_once(" ").unwrap();
     let (obsidian_cost, _) = obsidian_cost.split_once(" ").unwrap();
 
+    let or_c = ore_def.parse().unwrap();
+    let cl_c = clay_def.parse().unwrap();
+    let ob_or_c = ore_cost.parse().unwrap();
+    let ob_cl_c = clay_cost.parse().unwrap();
+    let ge_or_c = ore_cost_2.parse().unwrap();
+    let ge_ob_c = obsidian_cost.parse().unwrap();
+
     return BP {
-        ore_robot_cost: ore_def.parse().unwrap(),
+        or_c ,
+        cl_c ,
+        ob_or_c , ob_cl_c ,
+        ge_or_c , ge_ob_c ,
 
-        clay_robot_cost: clay_def.parse().unwrap(),
-
-        obs_robot_ore_cost: ore_cost.parse().unwrap(),
-        obs_robot_clay_cost: clay_cost.parse().unwrap(),
-
-        geo_robot_ore_cost: ore_cost_2.parse().unwrap(),
-        geo_robot_obs_cost: obsidian_cost.parse().unwrap(),
+        or_m: or_c.max(cl_c.max(ob_or_c.max(ge_or_c))),
+        cl_m: ob_cl_c,
+        ob_m: ge_ob_c,
     };
 }
 
 struct State {
-    ore_count: u8,
-    clay_count: u8,
-    obsidian_count: u8,
-    geode_count: u8,
-
-    ore_robots: u8,
-    clay_robots: u8,
-    obsidian_robots: u8,
-    geode_robots: u8,
-
+    or: u8, cl: u8, ob: u8, ge: u8,
+    or_r: u8, cl_r: u8, ob_r: u8, ge_r: u8,
     time: u8,
 }
 
@@ -91,8 +76,8 @@ impl Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "State (Time: {}):\n\tResources = ({:?})\n\tRobots = ({:?})\n", 
             self.time,
-            vec![ self.ore_count, self.clay_count, self.obsidian_count, self.geode_count ],
-            vec![ self.ore_robots, self.clay_robots, self.obsidian_robots, self.geode_robots ],
+            vec![ self.or, self.cl, self.ob, self.ge ],
+            vec![ self.or_r, self.cl_r, self.ob_r, self.ge_r ],
         )
     }
 }
@@ -111,51 +96,27 @@ pub fn main() {
     println!("[Day19] Complete -----------------------");
 }
 
-fn robot_possible(state: &State, robot: Robot) -> bool {
-    match robot {
-        Robot::Ore => true,
-        Robot::Clay => true,
-        Robot::Obsidian => state.ore_robots > 0 && state.clay_robots > 0,
-        Robot::Geode => state.ore_robots > 0 && state.obsidian_robots > 0,
+fn check_ore(b: &BP, s: &State) -> (bool, u8) {
+    if s.or_r < b.or_m {
+        let mut t = 0;
+        if s.or < b.or_c { t = (b.or_c - s.or) / s.or_r; }
+
+        return (true, t + 1);
+    }
+    else {
+        return (false, 0);
     }
 }
 
-fn turns_to_build(bp: &BP, state: &State, robot: Robot) -> u8 {
-    match robot {
-        Robot::Ore => {
-            if bp.ore_robot_cost < state.ore_count { 0 }
-            else { (bp.ore_robot_cost - state.ore_count) / state.ore_robots }
-        },
-        Robot::Clay => {
-            if bp.clay_robot_cost < state.ore_count { 0 }
-            else { (bp.clay_robot_cost - state.ore_count) / state.ore_robots }
-        },
-        Robot::Obsidian => {
-            let mut t_ore = 0;
-            if bp.obs_robot_ore_cost > state.ore_count {
-                t_ore = (bp.obs_robot_ore_cost - state.ore_count) / state.ore_robots;
-            }
+fn check_clay(b: &BP, s: &State) -> (bool, u8) {
+    if s.cl_r < b.cl_m {
+        let mut t = 0;
+        if s.or < b.cl_c { t = (b.cl_c - s.or) / s.or_r; }
 
-            let mut t_clay = 0;
-            if bp.obs_robot_clay_cost > state.clay_count {
-                t_clay = (bp.obs_robot_clay_cost - state.clay_count) / state.clay_robots;
-            }
-
-            t_ore.max(t_clay)
-        },
-        Robot::Geode => {
-            let mut t_ore = 0;
-            if bp.geo_robot_ore_cost > state.ore_count {
-                t_ore = (bp.geo_robot_ore_cost - state.ore_count) / state.ore_robots;
-            }
-
-            let mut t_obs = 0;
-            if bp.geo_robot_obs_cost > state.obsidian_count {
-                t_obs = (bp.geo_robot_obs_cost - state.obsidian_count) / state.obsidian_robots;
-            }
-
-            t_ore.max(t_obs)
-        },
+        return (true, t + 1);
+    }
+    else {
+        return (false, 0);
     }
 }
 
@@ -167,160 +128,45 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
         let mut bp_max: u32 = 0;
 
         let mut stack = vec![ State {
-            ore_count: 0, clay_count: 0, obsidian_count: 0, geode_count: 0,
-            ore_robots: 1, clay_robots: 0, obsidian_robots: 0, geode_robots: 0,
+            or: 0, cl: 0, ob: 0, ge: 0,
+            or_r: 1, cl_r: 0, ob_r: 0, ge_r: 0,
             time: 0,
         }];
 
         while let Some(state) = stack.pop() {
+            println!("{}", state);
+
             if state.time == 24 {
                 // This branch is over
-                if state.geode_count as u32 > bp_max { bp_max = state.geode_count as u32 }
+                if state.ge as u32 > bp_max { bp_max = state.ge as u32 }
                 continue;
             }
 
-            if robot_possible(&state, Robot::Geode) {
-                let t = turns_to_build(&bp, &state, Robot::Geode) + 1;
-                if state.time + t <= 24 {
-                    stack.push(State {
-                        ore_count: state.ore_count + (state.ore_robots * t) - bp.geo_robot_ore_cost,
-                        clay_count: state.clay_count + (state.clay_robots * t),
-                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t) - bp.geo_robot_obs_cost,
-                        geode_count: state.geode_count + (state.geode_robots * t),
-
-                        ore_robots: state.ore_robots,
-                        clay_robots: state.clay_robots,
-                        obsidian_robots: state.obsidian_robots,
-                        geode_robots: state.geode_robots + 1,
-
-                        time: state.time + t,
-                    });
-                }
-                else {
-                    let t = 24 - state.time;
-                    stack.push(State {
-                        ore_count: state.ore_count + (state.ore_robots * t),
-                        clay_count: state.clay_count + (state.clay_robots * t),
-                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
-                        geode_count: state.geode_count + (state.geode_robots * t),
-
-                        ore_robots: state.ore_robots,
-                        clay_robots: state.clay_robots,
-                        obsidian_robots: state.obsidian_robots,
-                        geode_robots: state.geode_robots,
-
-                        time: state.time + t,
-                    });
-                }
+            let (build_ore, t_ore) = check_ore(bp, &state);
+            if build_ore {
+                stack.push(State {
+                    or: state.or + (state.or_r * t_ore) - bp.or_c,
+                    cl: state.cl + (state.cl_r & t_ore),
+                    ob: state.ob + (state.ob_r & t_ore),
+                    ge: state.ge + (state.ge_r & t_ore),
+                    or_r: state.or_r + 1, cl_r: state.cl_r, ob_r: state.ob_r, ge_r: state.ge_r,
+                    time: state.time + t_ore,
+                })
             }
 
-            if robot_possible(&state, Robot::Obsidian) {
-                let t = turns_to_build(&bp, &state, Robot::Obsidian) + 1;
-                if state.time + t <= 24 {
-                    stack.push(State {
-                        ore_count: state.ore_count + (state.ore_robots * t) - bp.obs_robot_ore_cost,
-                        clay_count: state.clay_count + (state.clay_robots * t) - bp.obs_robot_clay_cost,
-                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
-                        geode_count: state.geode_count + (state.geode_robots * t),
-
-                        ore_robots: state.ore_robots,
-                        clay_robots: state.clay_robots,
-                        obsidian_robots: state.obsidian_robots + 1,
-                        geode_robots: state.geode_robots,
-
-                        time: state.time + t,
-                    });
-                }
-                else {
-                    let t = 24 - state.time;
-                    stack.push(State {
-                        ore_count: state.ore_count + (state.ore_robots * t),
-                        clay_count: state.clay_count + (state.clay_robots * t),
-                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
-                        geode_count: state.geode_count + (state.geode_robots * t),
-
-                        ore_robots: state.ore_robots,
-                        clay_robots: state.clay_robots,
-                        obsidian_robots: state.obsidian_robots,
-                        geode_robots: state.geode_robots,
-
-                        time: state.time + t,
-                    });
-                }
-            }
-
-            if robot_possible(&state, Robot::Clay) {
-                let t = turns_to_build(&bp, &state, Robot::Clay) + 1;
-                if state.time + t <= 24 {
-                    stack.push(State {
-                        ore_count: state.ore_count + (state.ore_robots * t) - bp.clay_robot_cost,
-                        clay_count: state.clay_count + (state.clay_robots * t),
-                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
-                        geode_count: state.geode_count + (state.geode_robots * t),
-
-                        ore_robots: state.ore_robots,
-                        clay_robots: state.clay_robots + 1,
-                        obsidian_robots: state.obsidian_robots,
-                        geode_robots: state.geode_robots,
-
-                        time: state.time + t,
-                    });
-                }
-                else {
-                    let t = 24 - state.time;
-                    stack.push(State {
-                        ore_count: state.ore_count + (state.ore_robots * t),
-                        clay_count: state.clay_count + (state.clay_robots * t),
-                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
-                        geode_count: state.geode_count + (state.geode_robots * t),
-
-                        ore_robots: state.ore_robots,
-                        clay_robots: state.clay_robots,
-                        obsidian_robots: state.obsidian_robots,
-                        geode_robots: state.geode_robots,
-
-                        time: state.time + t,
-                    });
-                }
-            }
-
-            if robot_possible(&state, Robot::Ore) {
-                let t = turns_to_build(&bp, &state, Robot::Ore) + 1;
-                if state.time + t <= 24 {
-                    stack.push(State {
-                        ore_count: state.ore_count + (state.ore_robots * t) - bp.ore_robot_cost,
-                        clay_count: state.clay_count + (state.clay_robots * t),
-                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
-                        geode_count: state.geode_count + (state.geode_robots * t),
-
-                        ore_robots: state.ore_robots + 1,
-                        clay_robots: state.clay_robots,
-                        obsidian_robots: state.obsidian_robots,
-                        geode_robots: state.geode_robots,
-
-                        time: state.time + t,
-                    });
-                }
-                else {
-                    let t = 24 - state.time;
-                    stack.push(State {
-                        ore_count: state.ore_count + (state.ore_robots * t),
-                        clay_count: state.clay_count + (state.clay_robots * t),
-                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
-                        geode_count: state.geode_count + (state.geode_robots * t),
-
-                        ore_robots: state.ore_robots,
-                        clay_robots: state.clay_robots,
-                        obsidian_robots: state.obsidian_robots,
-                        geode_robots: state.geode_robots,
-
-                        time: state.time + t,
-                    });
-                }
+            let (build_clay, t_clay) = check_clay(bp, &state);
+            if build_clay {
+                stack.push(State {
+                    or: state.or + (state.or_r * t_clay) - bp.cl_c,
+                    cl: state.cl + (state.cl_r & t_clay),
+                    ob: state.ob + (state.ob_r & t_clay),
+                    ge: state.ge + (state.ge_r & t_clay),
+                    or_r: state.or_r, cl_r: state.cl_r + 1, ob_r: state.ob_r, ge_r: state.ge_r,
+                    time: state.time + t_clay,
+                })
             }
         }
 
-        println!("Max for blueprint: {}", bp_max);
         quality_sum += bp_max * (idx+1) as u32
     }
 
