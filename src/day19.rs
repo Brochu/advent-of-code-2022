@@ -82,11 +82,14 @@ struct State {
     clay_robots: u32,
     obsidian_robots: u32,
     geode_robots: u32,
+
+    time_left: u32,
 }
 
 impl Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "State:\n\tResources = ({:?})\n\tRobots = ({:?})\n", 
+        write!(f, "State ({} mins left):\n\tResources = ({:?})\n\tRobots = ({:?})\n", 
+            self.time_left,
             vec![ self.ore_count, self.clay_count, self.obsidian_count, self.geode_count ],
             vec![ self.ore_robots, self.clay_robots, self.obsidian_robots, self.geode_robots ],
         )
@@ -107,21 +110,27 @@ pub fn main() {
     println!("[Day19] Complete -----------------------");
 }
 
-fn run_part1(bps: &Vec<BP>) -> i32 {
+fn run_part1(bps: &Vec<BP>) -> u32 {
+    let mut _max_geodes: u32 = 0;
+
     for (idx, bp) in bps.iter().enumerate() {
         println!("[{}] {}", idx+1, bp);
+        let mut _bp_max: u32 = 0;
 
         let mut stack = vec![ State {
             ore_count: 0, clay_count: 0, obsidian_count: 0, geode_count: 0,
             ore_robots: 1, clay_robots: 0, obsidian_robots: 0, geode_robots: 0,
+            time_left: 24,
         }];
 
         while let Some(state) = stack.pop() {
             println!("{}", state);
         }
+
+        if _bp_max > _max_geodes { _max_geodes = _bp_max }
     }
 
-    return 0;
+    return _max_geodes;
 }
 
 //fn run_part2() -> i32 {
