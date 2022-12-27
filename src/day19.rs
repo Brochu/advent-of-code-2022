@@ -120,7 +120,14 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
 
             let mut built = false;
             if state.or >= bp.ge_or_c  && state.ob >= bp.ge_ob_c {
-                // Build geode robot
+                stack.push(State {
+                    or: state.or + state.or_r - bp.ge_or_c,
+                    cl: state.cl + state.cl_r,
+                    ob: state.ob + state.ob_r - bp.ge_ob_c,
+                    ge: state.ge + state.ge_r,
+                    or_r: state.or_r, cl_r: state.cl_r, ob_r: state.ob_r, ge_r: state.ge_r + 1,
+                    time: state.time + 1,
+                });
                 built = true;
             }
 
