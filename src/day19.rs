@@ -1,11 +1,11 @@
 use std::fmt::Display;
 
-//enum Robot {
-//    Ore,
-//    Clay,
-//    Obsidian,
-//    Geode,
-//}
+enum Robot {
+    Ore,
+    Clay,
+    Obsidian,
+    Geode,
+}
 
 struct BP {
     ore_robot_cost: i8,
@@ -110,12 +110,21 @@ pub fn main() {
     println!("[Day19] Complete -----------------------");
 }
 
-fn run_part1(bps: &Vec<BP>) -> u32 {
-    let mut _max_geodes: u32 = 0;
+fn robot_possible(state: &State, robot: Robot) -> bool {
+    match robot {
+        Robot::Ore => true,
+        Robot::Clay => true,
+        Robot::Obsidian => state.ore_robots > 0 && state.clay_robots > 0,
+        Robot::Geode => state.ore_robots > 0 && state.obsidian_robots > 0,
+    }
+}
 
-    for (idx, bp) in bps.iter().enumerate() {
+fn run_part1(bps: &Vec<BP>) -> u32 {
+    let mut quality_sum: u32 = 0;
+
+    for (idx, bp) in bps[0..1].iter().enumerate() {
         println!("[{}] {}", idx+1, bp);
-        let mut _bp_max: u32 = 0;
+        let mut bp_max: u32 = 0;
 
         let mut stack = vec![ State {
             ore_count: 0, clay_count: 0, obsidian_count: 0, geode_count: 0,
@@ -125,12 +134,38 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
 
         while let Some(state) = stack.pop() {
             println!("{}", state);
+
+            if state.time_left == 0 {
+                // This branch is over
+                if state.geode_count > bp_max { bp_max = state.geode_count }
+                continue;
+            }
+
+            if robot_possible(&state, Robot::Geode) {
+                // Find in how many turns we can build geode robot
+                // Add state to calculate at that time
+            }
+
+            if robot_possible(&state, Robot::Obsidian) {
+                // Find in how many turns we can build geode robot
+                // Add state to calculate at that time
+            }
+
+            if robot_possible(&state, Robot::Clay) {
+                // Find in how many turns we can build geode robot
+                // Add state to calculate at that time
+            }
+
+            if robot_possible(&state, Robot::Ore) {
+                // Find in how many turns we can build geode robot
+                // Add state to calculate at that time
+            }
         }
 
-        if _bp_max > _max_geodes { _max_geodes = _bp_max }
+        quality_sum += bp_max * (idx+1) as u32
     }
 
-    return _max_geodes;
+    return quality_sum;
 }
 
 //fn run_part2() -> i32 {
