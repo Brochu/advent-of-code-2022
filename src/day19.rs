@@ -117,6 +117,31 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
                 if state.ge as u32 > bp_max { bp_max = state.ge as u32 }
                 continue;
             }
+
+            let mut built = false;
+            if state.or >= bp.ge_or_c  && state.ob >= bp.ge_ob_c {
+                // Build geode robot
+                built = true;
+            }
+
+            if state.ob_r < bp.ob_m && state.or >= bp.ob_or_c && state.cl >= bp.ob_cl_c {
+                // Build obsidian robot
+                built = true;
+            }
+
+            if state.cl_r < bp.cl_m && state.or >= bp.cl_c {
+                // Build clay robot
+                built = true;
+            }
+
+            if state.or_r < bp.or_m && state.or >= bp.or_c {
+                // Build ore robot
+                built = true;
+            }
+
+            if !built {
+                // Sim forward
+            }
         }
 
         quality_sum += bp_max * (idx+1) as u32
