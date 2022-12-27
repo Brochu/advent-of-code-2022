@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+#[derive(Debug)]
 enum Robot {
     Ore,
     Clay,
@@ -8,15 +9,15 @@ enum Robot {
 }
 
 struct BP {
-    ore_robot_cost: i8,
+    ore_robot_cost: u8,
 
-    clay_robot_cost: i8,
+    clay_robot_cost: u8,
 
-    obs_robot_ore_cost: i8,
-    obs_robot_clay_cost: i8,
+    obs_robot_ore_cost: u8,
+    obs_robot_clay_cost: u8,
 
-    geo_robot_ore_cost: i8,
-    geo_robot_obs_cost: i8,
+    geo_robot_ore_cost: u8,
+    geo_robot_obs_cost: u8,
 }
 
 impl Display for BP {
@@ -73,23 +74,23 @@ fn parse_blueprint(bp_str: &str) -> BP {
 }
 
 struct State {
-    ore_count: u32,
-    clay_count: u32,
-    obsidian_count: u32,
-    geode_count: u32,
+    ore_count: u8,
+    clay_count: u8,
+    obsidian_count: u8,
+    geode_count: u8,
 
-    ore_robots: u32,
-    clay_robots: u32,
-    obsidian_robots: u32,
-    geode_robots: u32,
+    ore_robots: u8,
+    clay_robots: u8,
+    obsidian_robots: u8,
+    geode_robots: u8,
 
-    time_left: u32,
+    time: u8,
 }
 
 impl Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "State ({} mins left):\n\tResources = ({:?})\n\tRobots = ({:?})\n", 
-            self.time_left,
+        write!(f, "State (Time: {}):\n\tResources = ({:?})\n\tRobots = ({:?})\n", 
+            self.time,
             vec![ self.ore_count, self.clay_count, self.obsidian_count, self.geode_count ],
             vec![ self.ore_robots, self.clay_robots, self.obsidian_robots, self.geode_robots ],
         )
@@ -119,6 +120,23 @@ fn robot_possible(state: &State, robot: Robot) -> bool {
     }
 }
 
+fn turns_to_build(bp: &BP, state: &State, robot: Robot) -> u8 {
+    match robot {
+        Robot::Ore => (bp.ore_robot_cost - state.ore_count) / state.ore_robots,
+        Robot::Clay => (bp.clay_robot_cost - state.ore_count) / state.ore_robots,
+        Robot::Obsidian => {
+            ((bp.obs_robot_ore_cost - state.ore_count) / state.ore_robots).max(
+                (bp.obs_robot_clay_cost - state.clay_count) / state.clay_robots
+            )
+        },
+        Robot::Geode => {
+            ((bp.geo_robot_ore_cost - state.ore_count) / state.ore_robots).max(
+                (bp.geo_robot_obs_cost - state.obsidian_count) / state.obsidian_robots
+            )
+        },
+    }
+}
+
 fn run_part1(bps: &Vec<BP>) -> u32 {
     let mut quality_sum: u32 = 0;
 
@@ -129,36 +147,156 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
         let mut stack = vec![ State {
             ore_count: 0, clay_count: 0, obsidian_count: 0, geode_count: 0,
             ore_robots: 1, clay_robots: 0, obsidian_robots: 0, geode_robots: 0,
-            time_left: 24,
+            time: 0,
         }];
 
         while let Some(state) = stack.pop() {
             println!("{}", state);
 
-            if state.time_left == 0 {
+            if state.time == 24 {
                 // This branch is over
-                if state.geode_count > bp_max { bp_max = state.geode_count }
+                if state.geode_count as u32 > bp_max { bp_max = state.geode_count as u32 }
                 continue;
             }
 
             if robot_possible(&state, Robot::Geode) {
-                // Find in how many turns we can build geode robot
-                // Add state to calculate at that time
+                let t = turns_to_build(&bp, &state, Robot::Geode) + 1;
+                if state.time + t <= 24 {
+                    stack.push(State {
+                        ore_count: state.ore_count + (state.ore_robots * t) - bp.geo_robot_ore_cost,
+                        clay_count: state.clay_count + (state.clay_robots * t),
+                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t) - bp.geo_robot_obs_cost,
+                        geode_count: state.geode_count + (state.geode_robots * t),
+
+                        ore_robots: state.ore_robots,
+                        clay_robots: state.clay_robots,
+                        obsidian_robots: state.obsidian_robots,
+                        geode_robots: state.geode_robots + 1,
+
+                        time: state.time + t,
+                    });
+                }
+                else {
+                    let t = 24 - state.time;
+                    stack.push(State {
+                        ore_count: state.ore_count + (state.ore_robots * t),
+                        clay_count: state.clay_count + (state.clay_robots * t),
+                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
+                        geode_count: state.geode_count + (state.geode_robots * t),
+
+                        ore_robots: state.ore_robots,
+                        clay_robots: state.clay_robots,
+                        obsidian_robots: state.obsidian_robots,
+                        geode_robots: state.geode_robots,
+
+                        time: state.time + t,
+                    });
+                }
             }
 
             if robot_possible(&state, Robot::Obsidian) {
-                // Find in how many turns we can build geode robot
-                // Add state to calculate at that time
+                let t = turns_to_build(&bp, &state, Robot::Obsidian) + 1;
+                if state.time + t <= 24 {
+                    stack.push(State {
+                        ore_count: state.ore_count + (state.ore_robots * t) - bp.obs_robot_ore_cost,
+                        clay_count: state.clay_count + (state.clay_robots * t) - bp.obs_robot_clay_cost,
+                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
+                        geode_count: state.geode_count + (state.geode_robots * t),
+
+                        ore_robots: state.ore_robots,
+                        clay_robots: state.clay_robots,
+                        obsidian_robots: state.obsidian_robots + 1,
+                        geode_robots: state.geode_robots,
+
+                        time: state.time + t,
+                    });
+                }
+                else {
+                    let t = 24 - state.time;
+                    stack.push(State {
+                        ore_count: state.ore_count + (state.ore_robots * t),
+                        clay_count: state.clay_count + (state.clay_robots * t),
+                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
+                        geode_count: state.geode_count + (state.geode_robots * t),
+
+                        ore_robots: state.ore_robots,
+                        clay_robots: state.clay_robots,
+                        obsidian_robots: state.obsidian_robots,
+                        geode_robots: state.geode_robots,
+
+                        time: state.time + t,
+                    });
+                }
             }
 
             if robot_possible(&state, Robot::Clay) {
-                // Find in how many turns we can build geode robot
-                // Add state to calculate at that time
+                let t = turns_to_build(&bp, &state, Robot::Clay) + 1;
+                if state.time + t <= 24 {
+                    stack.push(State {
+                        ore_count: state.ore_count + (state.ore_robots * t) - bp.clay_robot_cost,
+                        clay_count: state.clay_count + (state.clay_robots * t),
+                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
+                        geode_count: state.geode_count + (state.geode_robots * t),
+
+                        ore_robots: state.ore_robots,
+                        clay_robots: state.clay_robots + 1,
+                        obsidian_robots: state.obsidian_robots,
+                        geode_robots: state.geode_robots,
+
+                        time: state.time + t,
+                    });
+                }
+                else {
+                    let t = 24 - state.time;
+                    stack.push(State {
+                        ore_count: state.ore_count + (state.ore_robots * t),
+                        clay_count: state.clay_count + (state.clay_robots * t),
+                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
+                        geode_count: state.geode_count + (state.geode_robots * t),
+
+                        ore_robots: state.ore_robots,
+                        clay_robots: state.clay_robots,
+                        obsidian_robots: state.obsidian_robots,
+                        geode_robots: state.geode_robots,
+
+                        time: state.time + t,
+                    });
+                }
             }
 
             if robot_possible(&state, Robot::Ore) {
-                // Find in how many turns we can build geode robot
-                // Add state to calculate at that time
+                let t = turns_to_build(&bp, &state, Robot::Ore) + 1;
+                if state.time + t <= 24 {
+                    stack.push(State {
+                        ore_count: state.ore_count + (state.ore_robots * t) - bp.ore_robot_cost,
+                        clay_count: state.clay_count + (state.clay_robots * t),
+                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
+                        geode_count: state.geode_count + (state.geode_robots * t),
+
+                        ore_robots: state.ore_robots + 1,
+                        clay_robots: state.clay_robots,
+                        obsidian_robots: state.obsidian_robots,
+                        geode_robots: state.geode_robots,
+
+                        time: state.time + t,
+                    });
+                }
+                else {
+                    let t = 24 - state.time;
+                    stack.push(State {
+                        ore_count: state.ore_count + (state.ore_robots * t),
+                        clay_count: state.clay_count + (state.clay_robots * t),
+                        obsidian_count: state.obsidian_count + (state.obsidian_robots * t),
+                        geode_count: state.geode_count + (state.geode_robots * t),
+
+                        ore_robots: state.ore_robots,
+                        clay_robots: state.clay_robots,
+                        obsidian_robots: state.obsidian_robots,
+                        geode_robots: state.geode_robots,
+
+                        time: state.time + t,
+                    });
+                }
             }
         }
 
