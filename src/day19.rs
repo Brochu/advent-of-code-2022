@@ -72,6 +72,27 @@ fn parse_blueprint(bp_str: &str) -> BP {
     };
 }
 
+struct State {
+    ore_count: u32,
+    clay_count: u32,
+    obsidian_count: u32,
+    geode_count: u32,
+
+    ore_robots: u32,
+    clay_robots: u32,
+    obsidian_robots: u32,
+    geode_robots: u32,
+}
+
+impl Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "State:\n\tResources = ({:?})\n\tRobots = ({:?})\n", 
+            vec![ self.ore_count, self.clay_count, self.obsidian_count, self.geode_count ],
+            vec![ self.ore_robots, self.clay_robots, self.obsidian_robots, self.geode_robots ],
+        )
+    }
+}
+
 pub fn main() {
     println!("[Day19] Solutions:");
 
@@ -87,7 +108,19 @@ pub fn main() {
 }
 
 fn run_part1(bps: &Vec<BP>) -> i32 {
-    bps.iter().for_each(|bp| println!("{}", bp));
+    for (idx, bp) in bps.iter().enumerate() {
+        println!("[{}] {}", idx+1, bp);
+
+        let mut stack = vec![ State {
+            ore_count: 0, clay_count: 0, obsidian_count: 0, geode_count: 0,
+            ore_robots: 1, clay_robots: 0, obsidian_robots: 0, geode_robots: 0,
+        }];
+
+        while let Some(state) = stack.pop() {
+            println!("{}", state);
+        }
+    }
+
     return 0;
 }
 
