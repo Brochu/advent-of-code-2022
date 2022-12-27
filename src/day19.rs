@@ -122,17 +122,39 @@ fn robot_possible(state: &State, robot: Robot) -> bool {
 
 fn turns_to_build(bp: &BP, state: &State, robot: Robot) -> u8 {
     match robot {
-        Robot::Ore => (bp.ore_robot_cost - state.ore_count) / state.ore_robots,
-        Robot::Clay => (bp.clay_robot_cost - state.ore_count) / state.ore_robots,
+        Robot::Ore => {
+            if bp.ore_robot_cost < state.ore_count { 0 }
+            else { (bp.ore_robot_cost - state.ore_count) / state.ore_robots }
+        },
+        Robot::Clay => {
+            if bp.clay_robot_cost < state.ore_count { 0 }
+            else { (bp.clay_robot_cost - state.ore_count) / state.ore_robots }
+        },
         Robot::Obsidian => {
-            ((bp.obs_robot_ore_cost - state.ore_count) / state.ore_robots).max(
-                (bp.obs_robot_clay_cost - state.clay_count) / state.clay_robots
-            )
+            let mut t_ore = 0;
+            if bp.obs_robot_ore_cost > state.ore_count {
+                t_ore = (bp.obs_robot_ore_cost - state.ore_count) / state.ore_robots;
+            }
+
+            let mut t_clay = 0;
+            if bp.obs_robot_clay_cost > state.clay_count {
+                t_clay = (bp.obs_robot_clay_cost - state.clay_count) / state.clay_robots;
+            }
+
+            t_ore.max(t_clay)
         },
         Robot::Geode => {
-            ((bp.geo_robot_ore_cost - state.ore_count) / state.ore_robots).max(
-                (bp.geo_robot_obs_cost - state.obsidian_count) / state.obsidian_robots
-            )
+            let mut t_ore = 0;
+            if bp.geo_robot_ore_cost > state.ore_count {
+                t_ore = (bp.geo_robot_ore_cost - state.ore_count) / state.ore_robots;
+            }
+
+            let mut t_obs = 0;
+            if bp.geo_robot_obs_cost > state.obsidian_count {
+                t_obs = (bp.geo_robot_obs_cost - state.obsidian_count) / state.obsidian_robots;
+            }
+
+            t_ore.max(t_obs)
         },
     }
 }
@@ -151,8 +173,6 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
         }];
 
         while let Some(state) = stack.pop() {
-            println!("{}", state);
-
             if state.time == 24 {
                 // This branch is over
                 if state.geode_count as u32 > bp_max { bp_max = state.geode_count as u32 }
@@ -300,6 +320,7 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
             }
         }
 
+        println!("Max for blueprint: {}", bp_max);
         quality_sum += bp_max * (idx+1) as u32
     }
 
