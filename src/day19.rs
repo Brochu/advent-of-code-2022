@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::time::Instant;
 
 struct BP {
     or_c: u32,
@@ -85,7 +86,7 @@ impl Display for State {
 pub fn main() {
     println!("[Day19] Solutions:");
 
-    let blueprints: Vec<_> = include_str!("../data/day19.example")
+    let blueprints: Vec<_> = include_str!("../data/day19.input")
         .lines()
         .map(|line| parse_blueprint(line))
         .collect();
@@ -98,8 +99,9 @@ pub fn main() {
 
 fn run_part1(bps: &Vec<BP>) -> u32 {
     let mut quality_sum: u32 = 0;
+    let now = Instant::now();
 
-    for (idx, bp) in bps[0..1].iter().enumerate() {
+    for (idx, bp) in bps[..].iter().enumerate() {
         println!("[{}] {}", idx+1, bp);
         let mut bp_max: u32 = 0;
 
@@ -110,15 +112,14 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
         }];
 
         while let Some(state) = stack.pop() {
-            println!("{}", state);
+            //println!("{}", state);
 
             if state.time == 24 {
                 // This branch is over
-                if state.ge as u32 > bp_max { bp_max = state.ge as u32 }
+                if state.ge > bp_max { bp_max = state.ge }
                 continue;
             }
 
-            let mut built = false;
             if state.or >= bp.ge_or_c  && state.ob >= bp.ge_ob_c {
                 stack.push(State {
                     or: state.or + state.or_r - bp.ge_or_c,
@@ -128,32 +129,55 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
                     or_r: state.or_r, cl_r: state.cl_r, ob_r: state.ob_r, ge_r: state.ge_r + 1,
                     time: state.time + 1,
                 });
-                built = true;
             }
 
             if state.ob_r < bp.ob_m && state.or >= bp.ob_or_c && state.cl >= bp.ob_cl_c {
-                // Build obsidian robot
-                built = true;
+                stack.push(State {
+                    or: state.or + state.or_r - bp.ob_or_c,
+                    cl: state.cl + state.cl_r - bp.ob_cl_c,
+                    ob: state.ob + state.ob_r,
+                    ge: state.ge + state.ge_r,
+                    or_r: state.or_r, cl_r: state.cl_r, ob_r: state.ob_r + 1, ge_r: state.ge_r,
+                    time: state.time + 1,
+                });
             }
 
             if state.cl_r < bp.cl_m && state.or >= bp.cl_c {
-                // Build clay robot
-                built = true;
+                stack.push(State {
+                    or: state.or + state.or_r - bp.cl_c,
+                    cl: state.cl + state.cl_r,
+                    ob: state.ob + state.ob_r,
+                    ge: state.ge + state.ge_r,
+                    or_r: state.or_r, cl_r: state.cl_r + 1, ob_r: state.ob_r, ge_r: state.ge_r,
+                    time: state.time + 1,
+                });
             }
 
             if state.or_r < bp.or_m && state.or >= bp.or_c {
-                // Build ore robot
-                built = true;
+                stack.push(State {
+                    or: state.or + state.or_r - bp.or_c,
+                    cl: state.cl + state.cl_r,
+                    ob: state.ob + state.ob_r,
+                    ge: state.ge + state.ge_r,
+                    or_r: state.or_r + 1, cl_r: state.cl_r, ob_r: state.ob_r, ge_r: state.ge_r,
+                    time: state.time + 1,
+                });
             }
 
-            if !built {
-                // Sim forward
-            }
+            stack.push(State {
+                or: state.or + state.or_r,
+                cl: state.cl + state.cl_r,
+                ob: state.ob + state.ob_r,
+                ge: state.ge + state.ge_r,
+                or_r: state.or_r, cl_r: state.cl_r, ob_r: state.ob_r, ge_r: state.ge_r,
+                time: state.time + 1,
+            });
         }
 
         quality_sum += bp_max * (idx+1) as u32
     }
 
+    println!("Time spent for this part: {}", now.elapsed().as_secs());
     return quality_sum;
 }
 
