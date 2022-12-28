@@ -91,17 +91,101 @@ pub fn main() {
         .map(|line| parse_blueprint(line))
         .collect();
 
-    println!("[Day19] Part 1 => {}", run_part1(&blueprints));
-    //println!("[Day19] Part 2 => {}", run_part2());
+    //println!("[Day19] Part 1 => {}", run_part1(&blueprints));
+    println!("[Day19] Part 2 => {}", run_part2(&blueprints));
 
     println!("[Day19] Complete -----------------------");
 }
 
-fn run_part1(bps: &Vec<BP>) -> u32 {
-    let mut quality_sum: u32 = 0;
+//fn run_part1(bps: &Vec<BP>) -> u32 {
+//    let mut quality_sum: u32 = 0;
+//    let now = Instant::now();
+//
+//    for (idx, bp) in bps[..].iter().enumerate() {
+//        println!("[{}] {}", idx+1, bp);
+//        let mut bp_max: u32 = 0;
+//
+//        let mut stack = vec![ State {
+//            or: 0, cl: 0, ob: 0, ge: 0,
+//            or_r: 1, cl_r: 0, ob_r: 0, ge_r: 0,
+//            time: 0,
+//        }];
+//
+//        while let Some(state) = stack.pop() {
+//            //println!("{}", state);
+//
+//            if state.time == 24 {
+//                // This branch is over
+//                if state.ge > bp_max { bp_max = state.ge }
+//                continue;
+//            }
+//
+//            if state.or >= bp.ge_or_c  && state.ob >= bp.ge_ob_c {
+//                stack.push(State {
+//                    or: state.or + state.or_r - bp.ge_or_c,
+//                    cl: state.cl + state.cl_r,
+//                    ob: state.ob + state.ob_r - bp.ge_ob_c,
+//                    ge: state.ge + state.ge_r,
+//                    or_r: state.or_r, cl_r: state.cl_r, ob_r: state.ob_r, ge_r: state.ge_r + 1,
+//                    time: state.time + 1,
+//                });
+//            }
+//
+//            if state.ob_r < bp.ob_m && state.or >= bp.ob_or_c && state.cl >= bp.ob_cl_c {
+//                stack.push(State {
+//                    or: state.or + state.or_r - bp.ob_or_c,
+//                    cl: state.cl + state.cl_r - bp.ob_cl_c,
+//                    ob: state.ob + state.ob_r,
+//                    ge: state.ge + state.ge_r,
+//                    or_r: state.or_r, cl_r: state.cl_r, ob_r: state.ob_r + 1, ge_r: state.ge_r,
+//                    time: state.time + 1,
+//                });
+//            }
+//
+//            if state.cl_r < bp.cl_m && state.or >= bp.cl_c {
+//                stack.push(State {
+//                    or: state.or + state.or_r - bp.cl_c,
+//                    cl: state.cl + state.cl_r,
+//                    ob: state.ob + state.ob_r,
+//                    ge: state.ge + state.ge_r,
+//                    or_r: state.or_r, cl_r: state.cl_r + 1, ob_r: state.ob_r, ge_r: state.ge_r,
+//                    time: state.time + 1,
+//                });
+//            }
+//
+//            if state.or_r < bp.or_m && state.or >= bp.or_c {
+//                stack.push(State {
+//                    or: state.or + state.or_r - bp.or_c,
+//                    cl: state.cl + state.cl_r,
+//                    ob: state.ob + state.ob_r,
+//                    ge: state.ge + state.ge_r,
+//                    or_r: state.or_r + 1, cl_r: state.cl_r, ob_r: state.ob_r, ge_r: state.ge_r,
+//                    time: state.time + 1,
+//                });
+//            }
+//
+//            stack.push(State {
+//                or: state.or + state.or_r,
+//                cl: state.cl + state.cl_r,
+//                ob: state.ob + state.ob_r,
+//                ge: state.ge + state.ge_r,
+//                or_r: state.or_r, cl_r: state.cl_r, ob_r: state.ob_r, ge_r: state.ge_r,
+//                time: state.time + 1,
+//            });
+//        }
+//
+//        quality_sum += bp_max * (idx+1) as u32
+//    }
+//
+//    println!("Time spent for this part: {}", now.elapsed().as_secs());
+//    return quality_sum;
+//}
+
+fn run_part2(bps: &Vec<BP>) -> u32 {
+    let mut geodes_sum: u32 = 0;
     let now = Instant::now();
 
-    for (idx, bp) in bps[..].iter().enumerate() {
+    for (idx, bp) in bps[0..3].iter().enumerate() {
         println!("[{}] {}", idx+1, bp);
         let mut bp_max: u32 = 0;
 
@@ -114,7 +198,7 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
         while let Some(state) = stack.pop() {
             //println!("{}", state);
 
-            if state.time == 24 {
+            if state.time == 32 {
                 // This branch is over
                 if state.ge > bp_max { bp_max = state.ge }
                 continue;
@@ -164,6 +248,7 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
                 });
             }
 
+            //TODO: Look into a way to fast forward instead of sim every mins?
             stack.push(State {
                 or: state.or + state.or_r,
                 cl: state.cl + state.cl_r,
@@ -174,13 +259,11 @@ fn run_part1(bps: &Vec<BP>) -> u32 {
             });
         }
 
-        quality_sum += bp_max * (idx+1) as u32
+        println!("Found {} geodes for blueprint {}", bp_max, idx);
+        geodes_sum += bp_max;
     }
 
     println!("Time spent for this part: {}", now.elapsed().as_secs());
-    return quality_sum;
-}
+    return geodes_sum;
 
-//fn run_part2() -> i32 {
-//    return 0;
-//}
+}
