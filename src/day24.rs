@@ -1,6 +1,20 @@
 use std::fmt::Display;
 
-type Blizzard = ((u32, u32), u32);
+enum Direction {
+    Horizontal,
+    Vertical,
+}
+
+impl Display for Direction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Direction::Horizontal => write!(f, "H"),
+            Direction::Vertical => write!(f, "V"),
+        }
+    }
+}
+
+type Blizzard = (u32, Direction); // Starting Pos, Direction
 
 struct Map {
     width: u32,
@@ -11,11 +25,22 @@ struct Map {
 
 impl Display for Map {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let blizz = self.blizzards.iter().fold(String::new(), |output, ((x, y), cycle)| {
-            format!("{} (({}, {}), {})", output, x, y, cycle)
+        let blizz = self.blizzards.iter().fold(String::new(), |output, (start, dir)| {
+            format!("{} ({}, {})", output, start, dir)
         });
 
         write!(f, "Map ({} x {})\nBlizzards: {}", self.width, self.height, blizz)
+    }
+}
+impl Map {
+    fn get_tile(&self, time: u32, x: u32, y: u32) -> char {
+        if y == 0 || x == 0 || y == self.height + 1 || x == self.width + 1 {
+            return '#';
+        }
+        else {
+            println!("Find if there are any blizzards at ({}, {}) for time = {}", x, y, time);
+            return '.';
+        }
     }
 }
 
@@ -31,8 +56,8 @@ pub fn main() {
         .enumerate()
         .flat_map(|(y, line)| line.chars().enumerate().filter_map(move |(x, c)| {
             match c {
-                '^' | 'v' => Some(((x as u32, y as u32), height)),
-                '<' | '>' => Some(((x as u32, y as u32), width)),
+                '^' | 'v' => Some((x as u32, Direction::Vertical)),
+                '<' | '>' => Some((y as u32, Direction::Horizontal)),
                 _ => None,
             }
         }))
@@ -46,8 +71,20 @@ pub fn main() {
     println!("[Day24] Complete -----------------------");
 }
 
+fn show_map(map: &Map, time: u32) {
+    for y in 0..map.height + 2 {
+        for x in 0..map.width + 2 {
+            print!(" {} ", map.get_tile(time, x, y));
+        }
+        println!();
+    }
+}
+
 fn run_part1(map: &Map) -> u32 {
     println!("{}", map);
+    println!();
+    show_map(map, 0);
+
     return 0;
 }
 
