@@ -1,63 +1,60 @@
-use std::fmt::Display;
+use std::collections::HashMap;
 
-enum Direction {
-    Horizontal,
-    Vertical,
-}
-
-impl Display for Direction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Direction::Horizontal => write!(f, "H"),
-            Direction::Vertical => write!(f, "V"),
-        }
-    }
-}
-
-type Blizzard = (u32, Direction); // Starting Pos, Direction
+type Blizzard = ((i32, i32), char); // Starting Pos, Direction char
 
 struct Map {
-    width: u32,
-    height: u32,
+    width: i32,
+    height: i32,
 
     blizzards: Vec<Blizzard>,
 }
 
-impl Display for Map {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let blizz = self.blizzards.iter().fold(String::new(), |output, (start, dir)| {
-            format!("{} ({}, {})", output, start, dir)
-        });
-
-        write!(f, "Map ({} x {})\nBlizzards: {}", self.width, self.height, blizz)
-    }
-}
 impl Map {
-    fn get_tile(&self, time: u32, x: u32, y: u32) -> char {
-        if y == 0 || x == 0 || y == self.height + 1 || x == self.width + 1 {
-            return '#';
-        }
-        else {
-            println!("Find if there are any blizzards at ({}, {}) for time = {}", x, y, time);
-            return '.';
-        }
+    fn blizz_for_time(&self, time: i32) -> HashMap<(i32, i32), Vec<char>> {
+        self.blizzards.iter()
+            .fold(HashMap::new(), |mut lut, ((x, y), dir)| {
+                let new_pos = match dir {
+                    '^' => (*x, ((*y - 1) - time).rem_euclid(self.height) + 1),
+                    '<' => (((*x - 1) - time).rem_euclid(self.width) + 1, *y),
+                    '>' => (((*x - 1) + time).rem_euclid(self.width) + 1, *y),
+                    'v' => (*x, ((*y - 1) + time).rem_euclid(self.height) + 1),
+                    _ => panic!("Invalid direction for blizzard"),
+                };
+
+
+                if let Some(list) = lut.get_mut(&new_pos) {
+                    list.push(*dir);
+                }
+                else {
+                    lut.insert(new_pos, vec![*dir]);
+                }
+
+                lut
+            })
+    }
+
+    fn positions(&self) -> ((i32, i32), (i32, i32)){
+        (
+            (1, 0),
+            (self.width, self.height + 1),
+        )
     }
 }
 
-const DATA_STR: &str = include_str!("../data/day24.example.small");
+const DATA_STR: &str = include_str!("../data/day24.example");
 
 pub fn main() {
     println!("[Day24] Solutions:");
 
-    let width = DATA_STR.lines().next().unwrap().len() as u32 - 2;
-    let height = DATA_STR.lines().count() as u32 - 2;
+    let width = DATA_STR.lines().next().unwrap().len() as i32 - 2;
+    let height = DATA_STR.lines().count() as i32 - 2;
     let blizzards = DATA_STR
         .lines()
         .enumerate()
         .flat_map(|(y, line)| line.chars().enumerate().filter_map(move |(x, c)| {
+            let pos = (x as i32, y as i32);
             match c {
-                '^' | 'v' => Some((x as u32, Direction::Vertical)),
-                '<' | '>' => Some((y as u32, Direction::Horizontal)),
+                '^' | '<' | '>' | 'v' => Some((pos, c)),
                 _ => None,
             }
         }))
@@ -71,19 +68,34 @@ pub fn main() {
     println!("[Day24] Complete -----------------------");
 }
 
-fn show_map(map: &Map, time: u32) {
+fn show_map(map: &Map, time: i32) {
+    let blizz_map = map.blizz_for_time(time);
+
     for y in 0..map.height + 2 {
         for x in 0..map.width + 2 {
-            print!(" {} ", map.get_tile(time, x, y));
+            if let Some(list) = blizz_map.get(&(x, y)) {
+                if list.len() > 1 {
+                    print!(" {} ", list.len());
+                }
+                else {
+                    print!(" {} ", list[0]);
+                }
+            }
+            else if x == 0 || x == map.width + 1 || y == 0 || y == map.height + 1 {
+                print!(" # ");
+            }
+            else {
+                print!(" . ");
+            }
         }
         println!();
     }
 }
 
 fn run_part1(map: &Map) -> u32 {
-    println!("{}", map);
-    println!();
     show_map(map, 0);
+    let (start, end) = map.positions();
+    println!("Starting from: {:?}, Going to: {:?}", start, end);
 
     return 0;
 }
