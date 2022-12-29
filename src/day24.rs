@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use std::collections::{ HashMap, HashSet };
 
-type Blizzard = ((i32, i32), char); // Starting Pos, Direction char
+type Pos = (i32, i32);
+type Blizzard = (Pos, char); // Starting Pos, Direction char
 
 struct Map {
     width: i32,
@@ -10,7 +11,7 @@ struct Map {
 }
 
 impl Map {
-    fn blizz_for_time(&self, time: i32) -> HashMap<(i32, i32), Vec<char>> {
+    fn blizz_for_time(&self, time: i32) -> HashMap<Pos, Vec<char>> {
         self.blizzards.iter()
             .fold(HashMap::new(), |mut lut, ((x, y), dir)| {
                 let new_pos = match dir {
@@ -33,12 +34,18 @@ impl Map {
             })
     }
 
-    fn positions(&self) -> ((i32, i32), (i32, i32)){
+    fn positions(&self) -> (Pos, Pos){
         (
             (1, 0),
             (self.width, self.height + 1),
         )
     }
+}
+
+struct State {
+    pos: Pos,
+    time: i32,
+    visited: HashSet<Pos>,
 }
 
 const DATA_STR: &str = include_str!("../data/day24.example");
@@ -92,10 +99,45 @@ fn show_map(map: &Map, time: i32) {
     }
 }
 
-fn run_part1(map: &Map) -> u32 {
+fn list_options(pos: Pos, visited: &HashSet<Pos>) -> Vec<Pos> {
+    let (x, y) = pos;
+    return vec![
+        (x - 1, y), // Go left
+        (x, y - 1), // Go Up
+        (x + 1, y), // Go right
+        (x, y + 1), // Go down
+        (x, y), // Wait
+    ]
+        .iter()
+        .filter_map(|(tx, ty)| { 
+            if visited.contains(&(*tx, *ty)) || *tx <= 0 || *ty <= 0 {
+                None
+            }
+            else {
+                Some((*tx, *ty))
+            }
+        })
+        .collect();
+}
+
+fn run_part1(map: &Map) -> i32 {
     show_map(map, 0);
+
     let (start, end) = map.positions();
     println!("Starting from: {:?}, Going to: {:?}", start, end);
+    println!();
+
+    let mut stack = vec![
+        State{ pos: start, time: 0, visited: HashSet::from_iter(vec![ start ].into_iter()) }
+    ];
+
+    while let Some(s) = stack.pop() {
+        println!("[time = {}][at = {:?}]: {:?}", s.time, s.pos, s.visited);
+
+        list_options(s.pos, &s.visited)
+            .iter()
+            .for_each(|pos| println!("{:?}", pos));
+    }
 
     return 0;
 }
