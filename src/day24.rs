@@ -66,20 +66,20 @@ impl Map {
 
     fn list_options(&self, state: &State) -> Vec<Pos> {
         let (x, y) = state.pos;
-        let blizzards = self.list_blizzards(state.time, state.pos);
+        let blizzards = self.list_blizzards(state.time + 1, state.pos);
         println!("{:?}", blizzards);
 
         return vec![ (x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1), (x, y) ]
             .iter()
-            .filter_map(|(tx, ty)| { 
+            .filter_map(|&pos| { 
                 //TODO: Still need to handle blizzards, only around position given
-                if !state.visited.contains(&(*tx, *ty)) &&
-                    *tx > 0 && *ty > 0 &&
-                    *tx <= self.width && *ty <= self.height || 
-                    (*tx == self.end.0 && *ty == self.end.1)
+                if !state.visited.contains(&pos) &&
+                    !blizzards.contains_key(&pos) &&
+                    pos.0 > 0 && pos.1 > 0 &&
+                    pos.0 <= self.width && pos.1 <= self.height || 
+                    (pos.0 == self.end.0 && pos.1 == self.end.1)
                 {
-
-                    Some((*tx, *ty))
+                    Some(pos)
                 }
                 else {
                     None
@@ -159,6 +159,7 @@ fn run_part1(map: &Map) -> i32 {
     ];
     let mut min_time: i32 = i32::MAX;
 
+    // Change this so we can only run a given amount of minutes
     while let Some(s) = stack.pop() {
         let opts = map.list_options(&s);
 
@@ -168,6 +169,7 @@ fn run_part1(map: &Map) -> i32 {
             continue;
         }
 
+        println!("Options count: {}", opts.len());
         opts.iter()
             .for_each(|pos| {
                 // Update state with next position
