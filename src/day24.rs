@@ -43,6 +43,7 @@ impl Map {
         return vec![ (x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1), (x, y) ]
             .iter()
             .filter_map(|(tx, ty)| { 
+                //TODO: Still need to handle blizzards, only around position given
                 if !visited.contains(&(*tx, *ty)) &&
                     *tx > 0 && *ty > 0 &&
                     *tx <= self.width && *ty <= self.height || 
