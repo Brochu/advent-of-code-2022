@@ -7,6 +7,9 @@ struct Map {
     width: i32,
     height: i32,
 
+    start: Pos,
+    end: Pos,
+
     blizzards: Vec<Blizzard>,
 }
 
@@ -34,14 +37,29 @@ impl Map {
             })
     }
 
-    fn positions(&self) -> (Pos, Pos){
-        (
-            (1, 0),
-            (self.width, self.height + 1),
-        )
+    fn list_options(&self, pos: Pos, visited: &HashSet<Pos>) -> Vec<Pos> {
+        let (x, y) = pos;
+
+        return vec![ (x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1), (x, y) ]
+            .iter()
+            .filter_map(|(tx, ty)| { 
+                if !visited.contains(&(*tx, *ty)) &&
+                    *tx > 0 && *ty > 0 &&
+                    *tx <= self.width && *ty <= self.height || 
+                    (*tx == self.end.0 && *ty == self.end.1)
+                {
+
+                    Some((*tx, *ty))
+                }
+                else {
+                    None
+                }
+            })
+            .collect();
     }
 }
 
+#[derive(Clone)]
 struct State {
     pos: Pos,
     time: i32,
@@ -67,7 +85,7 @@ pub fn main() {
         }))
         .collect();
 
-    let map = Map { width, height, blizzards };
+    let map = Map { width, height, start: (1, 0), end: (width, height + 1), blizzards };
 
     println!("[Day24] Part 1 => {}", run_part1(&map));
     //println!("[Day24] Part 2 => {}", run_part2());
@@ -99,47 +117,40 @@ fn show_map(map: &Map, time: i32) {
     }
 }
 
-fn list_options(pos: Pos, visited: &HashSet<Pos>) -> Vec<Pos> {
-    let (x, y) = pos;
-    return vec![
-        (x - 1, y), // Go left
-        (x, y - 1), // Go Up
-        (x + 1, y), // Go right
-        (x, y + 1), // Go down
-        (x, y), // Wait
-    ]
-        .iter()
-        .filter_map(|(tx, ty)| { 
-            if visited.contains(&(*tx, *ty)) || *tx <= 0 || *ty <= 0 {
-                None
-            }
-            else {
-                Some((*tx, *ty))
-            }
-        })
-        .collect();
-}
 
 fn run_part1(map: &Map) -> i32 {
     show_map(map, 0);
 
-    let (start, end) = map.positions();
-    println!("Starting from: {:?}, Going to: {:?}", start, end);
+    println!("Starting from: {:?}, Going to: {:?}", map.start, map.end);
     println!();
 
     let mut stack = vec![
-        State{ pos: start, time: 0, visited: HashSet::from_iter(vec![ start ].into_iter()) }
+        State{ pos: map.start, time: 0, visited: HashSet::from_iter(vec![ map.start ].into_iter()) }
     ];
+    let mut min_time: i32 = i32::MAX;
 
     while let Some(s) = stack.pop() {
-        println!("[time = {}][at = {:?}]: {:?}", s.time, s.pos, s.visited);
+        let opts = map.list_options(s.pos, &s.visited);
 
-        list_options(s.pos, &s.visited)
-            .iter()
-            .for_each(|pos| println!("{:?}", pos));
+        if opts.iter().any(|&pos| pos == map.end){
+            println!("[time = {}][at = {:?}]: {:?}", s.time, s.pos, s.visited);
+            if s.time < min_time { min_time = s.time + 1 }
+            continue;
+        }
+
+        opts.iter()
+            .for_each(|pos| {
+                // Update state with next position
+                let mut state = s.clone();
+                state.visited.insert(*pos);
+                state.pos = *pos;
+                state.time += 1;
+
+                stack.push(state);
+            });
     }
 
-    return 0;
+    return min_time;
 }
 
 //fn run_part2() -> usize {
