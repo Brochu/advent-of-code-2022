@@ -37,9 +37,37 @@ impl Map {
             })
     }
 
+    fn list_blizzards(&self, time: i32, pos: Pos) -> HashMap<Pos, Vec<char>> {
+        self.blizzards.iter()
+            .filter(|&((x, y), dir)| {
+                *x >= (pos.0 - 1) && *x <= (pos.0 + 1) && (*dir == '^' || *dir == 'v') ||
+                *y >= (pos.1 - 1) && *y <= (pos.1 + 1) && (*dir == '<' || *dir == '>')
+            })
+            .fold(HashMap::new(), |mut lut, ((x, y), dir)| {
+                let new_pos = match dir {
+                    '^' => (*x, ((*y - 1) - time).rem_euclid(self.height) + 1),
+                    '<' => (((*x - 1) - time).rem_euclid(self.width) + 1, *y),
+                    '>' => (((*x - 1) + time).rem_euclid(self.width) + 1, *y),
+                    'v' => (*x, ((*y - 1) + time).rem_euclid(self.height) + 1),
+                    _ => panic!("Invalid direction for blizzard"),
+                };
+
+
+                if let Some(list) = lut.get_mut(&new_pos) {
+                    list.push(*dir);
+                }
+                else {
+                    lut.insert(new_pos, vec![*dir]);
+                }
+
+                lut
+            })
+    }
+
     fn list_options(&self, state: &State) -> Vec<Pos> {
         let (x, y) = state.pos;
-        let blizzards = self.blizz_for_time(state.time);
+        let blizzards = self.list_blizzards(state.time, state.pos);
+        println!("{:?}", blizzards);
 
         return vec![ (x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1), (x, y) ]
             .iter()
@@ -148,7 +176,7 @@ fn run_part1(map: &Map) -> i32 {
                 state.pos = *pos;
                 state.time += 1;
 
-                stack.push(state);
+                //stack.push(state);
             });
     }
 
