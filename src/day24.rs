@@ -67,14 +67,14 @@ impl Map {
     fn list_options(&self, state: &State) -> Vec<Pos> {
         let (x, y) = state.pos;
         let blizzards = self.list_blizzards(state.time + 1, state.pos);
-        println!("{:?}", blizzards);
+        println!("Blizzard {:?}", blizzards);
 
         return vec![ (x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1), (x, y) ]
             .iter()
             .filter_map(|&pos| { 
                 //TODO: Still need to handle blizzards, only around position given
-                if !state.visited.contains(&pos) &&
-                    !blizzards.contains_key(&pos) &&
+                if !blizzards.contains_key(&pos) &&
+                    !state.visited.contains(&pos) &&
                     pos.0 > 0 && pos.1 > 0 &&
                     pos.0 <= self.width && pos.1 <= self.height || 
                     (pos.0 == self.end.0 && pos.1 == self.end.1)
@@ -155,7 +155,7 @@ fn run_part1(map: &Map) -> i32 {
     println!();
 
     let mut stack = vec![
-        State{ pos: map.start, time: 0, visited: HashSet::from_iter(vec![ map.start ].into_iter()) }
+        State{ pos: map.start, time: 0, visited: HashSet::new() }
     ];
     let mut min_time: i32 = i32::MAX;
 
@@ -164,21 +164,23 @@ fn run_part1(map: &Map) -> i32 {
         let opts = map.list_options(&s);
 
         if opts.iter().any(|&pos| pos == map.end){
-            //println!("[time = {}][at = {:?}]: {:?}", s.time, s.pos, s.visited);
             if s.time < min_time { min_time = s.time + 1 }
             continue;
         }
 
-        println!("Options count: {}", opts.len());
+        if s.time > min_time {
+            continue;
+        }
+
         opts.iter()
-            .for_each(|pos| {
+            .for_each(|&pos| {
+                println!("[time = {}][at = {:?}]: {:?} - Trying {:?}\n", s.time, s.pos, s.visited, pos);
                 // Update state with next position
                 let mut state = s.clone();
-                state.visited.insert(*pos);
-                state.pos = *pos;
+                state.pos = pos;
                 state.time += 1;
 
-                //stack.push(state);
+                stack.push(state);
             });
     }
 
