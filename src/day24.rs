@@ -37,14 +37,15 @@ impl Map {
             })
     }
 
-    fn list_options(&self, pos: Pos, visited: &HashSet<Pos>) -> Vec<Pos> {
-        let (x, y) = pos;
+    fn list_options(&self, state: &State) -> Vec<Pos> {
+        let (x, y) = state.pos;
+        let blizzards = self.blizz_for_time(state.time);
 
         return vec![ (x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1), (x, y) ]
             .iter()
             .filter_map(|(tx, ty)| { 
                 //TODO: Still need to handle blizzards, only around position given
-                if !visited.contains(&(*tx, *ty)) &&
+                if !state.visited.contains(&(*tx, *ty)) &&
                     *tx > 0 && *ty > 0 &&
                     *tx <= self.width && *ty <= self.height || 
                     (*tx == self.end.0 && *ty == self.end.1)
@@ -131,10 +132,10 @@ fn run_part1(map: &Map) -> i32 {
     let mut min_time: i32 = i32::MAX;
 
     while let Some(s) = stack.pop() {
-        let opts = map.list_options(s.pos, &s.visited);
+        let opts = map.list_options(&s);
 
         if opts.iter().any(|&pos| pos == map.end){
-            println!("[time = {}][at = {:?}]: {:?}", s.time, s.pos, s.visited);
+            //println!("[time = {}][at = {:?}]: {:?}", s.time, s.pos, s.visited);
             if s.time < min_time { min_time = s.time + 1 }
             continue;
         }
