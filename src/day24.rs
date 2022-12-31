@@ -14,7 +14,7 @@ struct Map {
 }
 
 impl Map {
-    fn blizz_for_time(&self, time: i32) -> HashMap<Pos, Vec<char>> {
+    fn _blizz_for_time(&self, time: i32) -> HashMap<Pos, Vec<char>> {
         self.blizzards.iter()
             .fold(HashMap::new(), |mut lut, ((x, y), dir)| {
                 let new_pos = match dir {
@@ -37,13 +37,13 @@ impl Map {
             })
     }
 
-    fn list_blizzards(&self, time: i32, pos: Pos) -> HashMap<Pos, Vec<char>> {
+    fn list_blizzards(&self, time: i32, pos: Pos) -> HashSet<Pos> {
         self.blizzards.iter()
             .filter(|&((x, y), dir)| {
                 *x >= (pos.0 - 1) && *x <= (pos.0 + 1) && (*dir == '^' || *dir == 'v') ||
                 *y >= (pos.1 - 1) && *y <= (pos.1 + 1) && (*dir == '<' || *dir == '>')
             })
-            .fold(HashMap::new(), |mut lut, ((x, y), dir)| {
+            .fold(HashSet::new(), |mut lut, ((x, y), dir)| {
                 let new_pos = match dir {
                     '^' => (*x, ((*y - 1) - time).rem_euclid(self.height) + 1),
                     '<' => (((*x - 1) - time).rem_euclid(self.width) + 1, *y),
@@ -52,14 +52,7 @@ impl Map {
                     _ => panic!("Invalid direction for blizzard"),
                 };
 
-
-                if let Some(list) = lut.get_mut(&new_pos) {
-                    list.push(*dir);
-                }
-                else {
-                    lut.insert(new_pos, vec![*dir]);
-                }
-
+                lut.insert(new_pos);
                 lut
             })
     }
@@ -67,17 +60,16 @@ impl Map {
     fn list_options(&self, state: &State) -> Vec<Pos> {
         let (x, y) = state.pos;
         let blizzards = self.list_blizzards(state.time + 1, state.pos);
-        println!("Blizzard {:?}", blizzards);
 
         return vec![ (x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1), (x, y) ]
             .iter()
             .filter_map(|&pos| { 
-                //TODO: Still need to handle blizzards, only around position given
-                if !blizzards.contains_key(&pos) &&
+                if !blizzards.contains(&pos) &&
                     !state.visited.contains(&pos) &&
                     pos.0 > 0 && pos.1 > 0 &&
                     pos.0 <= self.width && pos.1 <= self.height || 
-                    (pos.0 == self.end.0 && pos.1 == self.end.1)
+                    (pos.0 == self.end.0 && pos.1 == self.end.1) ||
+                    (pos.0 == self.start.0 && pos.1 == self.start.1)
                 {
                     Some(pos)
                 }
@@ -94,9 +86,22 @@ struct State {
     pos: Pos,
     time: i32,
     visited: HashSet<Pos>,
+    priority: i32,
 }
 
-const DATA_STR: &str = include_str!("../data/day24.example");
+impl std::cmp::PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        todo!()
+    }
+}
+
+impl std::cmp::PartialEq for State {
+    fn eq(&self, other: &Self) -> bool {
+        todo!()
+    }
+}
+
+const DATA_STR: &str = include_str!("../data/day24.input");
 
 pub fn main() {
     println!("[Day24] Solutions:");
@@ -123,8 +128,8 @@ pub fn main() {
     println!("[Day24] Complete -----------------------");
 }
 
-fn show_map(map: &Map, time: i32) {
-    let blizz_map = map.blizz_for_time(time);
+fn _show_map(map: &Map, time: i32) {
+    let blizz_map = map._blizz_for_time(time);
 
     for y in 0..map.height + 2 {
         for x in 0..map.width + 2 {
@@ -149,7 +154,7 @@ fn show_map(map: &Map, time: i32) {
 
 
 fn run_part1(map: &Map) -> i32 {
-    show_map(map, 0);
+    //_show_map(map, 0);
 
     println!("Starting from: {:?}, Going to: {:?}", map.start, map.end);
     println!();
@@ -159,10 +164,14 @@ fn run_part1(map: &Map) -> i32 {
     ];
     let mut min_time: i32 = i32::MAX;
 
-    // Change this so we can only run a given amount of minutes
-    while let Some(s) = stack.pop() {
-        let opts = map.list_options(&s);
+    //TODO: Need to implement MinHeap to check the better option
+    // Add priority field to state
+    // Order states by priority
+    while let Some(mut s) = stack.pop() {
+        //println!("[time = {}][at = {:?}]", s.time, s.pos);
+        s.visited.remove(&s.pos);
 
+        let opts = map.list_options(&s);
         if opts.iter().any(|&pos| pos == map.end){
             if s.time < min_time { min_time = s.time + 1 }
             continue;
@@ -174,13 +183,15 @@ fn run_part1(map: &Map) -> i32 {
 
         opts.iter()
             .for_each(|&pos| {
-                println!("[time = {}][at = {:?}]: {:?} - Trying {:?}\n", s.time, s.pos, s.visited, pos);
                 // Update state with next position
-                let mut state = s.clone();
-                state.pos = pos;
-                state.time += 1;
+                if !s.visited.contains(&pos) {
+                    let mut state = s.clone();
+                    state.pos = pos;
+                    state.time += 1;
+                    state.visited.insert(s.pos);
 
-                stack.push(state);
+                    stack.insert(0, state);
+                }
             });
     }
 
