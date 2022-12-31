@@ -38,6 +38,7 @@ impl Map {
     }
 
     fn list_blizzards(&self, time: i32, pos: Pos) -> HashSet<Pos> {
+        //TODO: Cache all possible config of blizzards since there will be a cycle at one point
         self.blizzards.iter()
             .filter(|&((x, y), dir)| {
                 *x >= (pos.0 - 1) && *x <= (pos.0 + 1) && (*dir == '^' || *dir == 'v') ||
@@ -176,15 +177,14 @@ fn run_part1(map: &Map) -> i32 {
     let mut stack = BinaryHeap::from(vec![
         State { pos: map.start,
             time: 0,
-            visited: HashSet::new(),
+            visited: HashSet::new(), //TODO: We need to keep track of blizzard config as well as pos
             priority: dist(map.start, map.end),
         }
     ]);
     let mut min_time: i32 = i32::MAX;
 
-    while let Some(mut s) = stack.pop() {
+    while let Some(s) = stack.pop() {
         println!("[time = {}][at = {:?}][priority = {}]", s.time, s.pos, s.priority);
-        s.visited.remove(&s.pos);
 
         let opts = map.list_options(&s);
         if opts.iter().any(|&pos| pos == map.end){
@@ -199,15 +199,12 @@ fn run_part1(map: &Map) -> i32 {
         opts.iter()
             .for_each(|&pos| {
                 // Update state with next position
-                if !s.visited.contains(&pos) {
                     let mut state = s.clone();
                     state.pos = pos;
                     state.time += 1;
-                    state.visited.insert(s.pos);
                     state.priority = dist(pos, map.end);
 
                     stack.push(state);
-                }
             });
     }
 
