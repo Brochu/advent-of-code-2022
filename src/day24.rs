@@ -1,4 +1,4 @@
-use std::collections::{ HashMap, HashSet };
+use std::collections::{ HashMap, HashSet, BinaryHeap };
 
 type Pos = (i32, i32);
 type Blizzard = (Pos, char); // Starting Pos, Direction char
@@ -91,14 +91,23 @@ struct State {
 
 impl std::cmp::PartialOrd for State {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        todo!()
+        return Some(other.priority.cmp(&self.priority));
+    }
+}
+
+impl std::cmp::Ord for State {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        return other.priority.cmp(&self.priority);
     }
 }
 
 impl std::cmp::PartialEq for State {
     fn eq(&self, other: &Self) -> bool {
-        todo!()
+        return self.priority == other.priority;
     }
+}
+
+impl std::cmp::Eq for State {
 }
 
 const DATA_STR: &str = include_str!("../data/day24.input");
@@ -152,6 +161,11 @@ fn _show_map(map: &Map, time: i32) {
     }
 }
 
+fn dist(p0: Pos, p1: Pos) -> i32 {
+    let dx = (p1.0 - p0.0).abs();
+    let dy = (p1.1 - p0.1).abs();
+    return dx + dy;
+}
 
 fn run_part1(map: &Map) -> i32 {
     //_show_map(map, 0);
@@ -159,16 +173,17 @@ fn run_part1(map: &Map) -> i32 {
     println!("Starting from: {:?}, Going to: {:?}", map.start, map.end);
     println!();
 
-    let mut stack = vec![
-        State{ pos: map.start, time: 0, visited: HashSet::new() }
-    ];
+    let mut stack = BinaryHeap::from(vec![
+        State { pos: map.start,
+            time: 0,
+            visited: HashSet::new(),
+            priority: dist(map.start, map.end),
+        }
+    ]);
     let mut min_time: i32 = i32::MAX;
 
-    //TODO: Need to implement MinHeap to check the better option
-    // Add priority field to state
-    // Order states by priority
     while let Some(mut s) = stack.pop() {
-        //println!("[time = {}][at = {:?}]", s.time, s.pos);
+        println!("[time = {}][at = {:?}][priority = {}]", s.time, s.pos, s.priority);
         s.visited.remove(&s.pos);
 
         let opts = map.list_options(&s);
@@ -189,8 +204,9 @@ fn run_part1(map: &Map) -> i32 {
                     state.pos = pos;
                     state.time += 1;
                     state.visited.insert(s.pos);
+                    state.priority = dist(pos, map.end);
 
-                    stack.insert(0, state);
+                    stack.push(state);
                 }
             });
     }
