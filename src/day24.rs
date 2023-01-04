@@ -11,10 +11,23 @@ struct Map {
     end: Pos,
 
     blizzards: Vec<Blizzard>,
+    configs: Vec<HashSet<Pos>>,
 }
 
 impl Map {
-    fn _blizz_for_time(&self, time: i32) -> HashMap<Pos, Vec<char>> {
+    fn new(width: i32, height: i32, start: Pos, end: Pos, blizzards: Vec<Blizzard>) -> Map {
+        //TODO: Calculate all possible blizzards config
+        return Map {
+            width,
+            height,
+            start,
+            end,
+            blizzards,
+            configs: vec![],
+        };
+    }
+
+    fn blizz_for_time(&self, time: i32) -> HashMap<Pos, Vec<char>> {
         self.blizzards.iter()
             .fold(HashMap::new(), |mut lut, ((x, y), dir)| {
                 let new_pos = match dir {
@@ -37,30 +50,9 @@ impl Map {
             })
     }
 
-    fn list_blizzards(&self, time: i32, pos: Pos) -> HashSet<Pos> {
-        //TODO: Cache all possible config of blizzards since there will be a cycle at one point
-        self.blizzards.iter()
-            .filter(|&((x, y), dir)| {
-                *x >= (pos.0 - 1) && *x <= (pos.0 + 1) && (*dir == '^' || *dir == 'v') ||
-                *y >= (pos.1 - 1) && *y <= (pos.1 + 1) && (*dir == '<' || *dir == '>')
-            })
-            .fold(HashSet::new(), |mut lut, ((x, y), dir)| {
-                let new_pos = match dir {
-                    '^' => (*x, ((*y - 1) - time).rem_euclid(self.height) + 1),
-                    '<' => (((*x - 1) - time).rem_euclid(self.width) + 1, *y),
-                    '>' => (((*x - 1) + time).rem_euclid(self.width) + 1, *y),
-                    'v' => (*x, ((*y - 1) + time).rem_euclid(self.height) + 1),
-                    _ => panic!("Invalid direction for blizzard"),
-                };
-
-                lut.insert(new_pos);
-                lut
-            })
-    }
-
     fn list_options(&self, state: &State) -> Vec<Pos> {
         let (x, y) = state.pos;
-        let blizzards = self.list_blizzards(state.time + 1, state.pos);
+        let blizzards = &self.configs[(state.time + 1) as usize];
 
         return vec![ (x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1), (x, y) ]
             .iter()
@@ -111,7 +103,7 @@ impl std::cmp::PartialEq for State {
 impl std::cmp::Eq for State {
 }
 
-const DATA_STR: &str = include_str!("../data/day24.input");
+const DATA_STR: &str = include_str!("../data/day24.example");
 
 pub fn main() {
     println!("[Day24] Solutions:");
@@ -130,7 +122,7 @@ pub fn main() {
         }))
         .collect();
 
-    let map = Map { width, height, start: (1, 0), end: (width, height + 1), blizzards };
+    let map = Map::new(width, height, (1, 0), (width, height + 1), blizzards);
 
     println!("[Day24] Part 1 => {}", run_part1(&map));
     //println!("[Day24] Part 2 => {}", run_part2());
@@ -138,8 +130,8 @@ pub fn main() {
     println!("[Day24] Complete -----------------------");
 }
 
-fn _show_map(map: &Map, time: i32) {
-    let blizz_map = map._blizz_for_time(time);
+fn show_map(map: &Map, time: i32) {
+    let blizz_map = map.blizz_for_time(time);
 
     for y in 0..map.height + 2 {
         for x in 0..map.width + 2 {
@@ -169,7 +161,7 @@ fn dist(p0: Pos, p1: Pos) -> i32 {
 }
 
 fn run_part1(map: &Map) -> i32 {
-    //_show_map(map, 0);
+    show_map(map, 0);
 
     println!("Starting from: {:?}, Going to: {:?}", map.start, map.end);
     println!();
