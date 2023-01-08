@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::fmt::{Display, write};
 
 type Pos = (i32, i32);
 type Blizzard = (Pos, char); // Starting Pos, Direction char
@@ -80,6 +81,18 @@ fn _show_map(map: &Map, time: i32) {
     }
 }
 
+struct State {
+    time: i32,
+    pos: Pos,
+    visited: HashSet<Pos>,
+}
+
+impl Display for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[at={}; {:?}]\nvisit={:?}", self.time, self.pos, self.visited)
+    }
+}
+
 fn run_part1(map: &Map) -> i32 {
     println!("Starting from: {:?}, Going to: {:?}", map.start, map.end);
 
@@ -101,6 +114,14 @@ fn run_part1(map: &Map) -> i32 {
     //    _show_map(map, i as i32);
     //    println!();
     //}
+
+    // Start exploring paths
+    let state = State { time: 0, pos: map.start, visited: HashSet::new() };
+    let mut stack = vec![ state ];
+
+    while let Some(s) = stack.pop() {
+        println!("Exploring state:\n{}", s);
+    }
 
     return 0;
 }
