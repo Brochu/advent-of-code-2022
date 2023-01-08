@@ -1,4 +1,4 @@
-use std::collections::{ HashMap, HashSet, BinaryHeap };
+use std::collections::HashSet;
 
 type Pos = (i32, i32);
 type Blizzard = (Pos, char); // Starting Pos, Direction char
@@ -11,25 +11,12 @@ struct Map {
     end: Pos,
 
     blizzards: Vec<Blizzard>,
-    configs: Vec<HashSet<Pos>>,
 }
 
 impl Map {
-    fn new(width: i32, height: i32, start: Pos, end: Pos, blizzards: Vec<Blizzard>) -> Map {
-        //TODO: Calculate all possible blizzards config
-        return Map {
-            width,
-            height,
-            start,
-            end,
-            blizzards,
-            configs: vec![],
-        };
-    }
-
-    fn blizz_for_time(&self, time: i32) -> HashMap<Pos, Vec<char>> {
+    fn blizz_for_time(&self, time: i32) -> HashSet<Pos> {
         self.blizzards.iter()
-            .fold(HashMap::new(), |mut lut, ((x, y), dir)| {
+            .fold(HashSet::new(), |mut lut, ((x, y), dir)| {
                 let new_pos = match dir {
                     '^' => (*x, ((*y - 1) - time).rem_euclid(self.height) + 1),
                     '<' => (((*x - 1) - time).rem_euclid(self.width) + 1, *y),
@@ -38,69 +25,13 @@ impl Map {
                     _ => panic!("Invalid direction for blizzard"),
                 };
 
-
-                if let Some(list) = lut.get_mut(&new_pos) {
-                    list.push(*dir);
-                }
-                else {
-                    lut.insert(new_pos, vec![*dir]);
+                if !lut.contains(&new_pos) {
+                    lut.insert(new_pos);
                 }
 
                 lut
             })
     }
-
-    fn list_options(&self, state: &State) -> Vec<Pos> {
-        let (x, y) = state.pos;
-        let blizzards = &self.configs[(state.time + 1) as usize];
-
-        return vec![ (x - 1, y), (x, y - 1), (x + 1, y), (x, y + 1), (x, y) ]
-            .iter()
-            .filter_map(|&pos| { 
-                if !blizzards.contains(&pos) &&
-                    !state.visited.contains(&pos) &&
-                    pos.0 > 0 && pos.1 > 0 &&
-                    pos.0 <= self.width && pos.1 <= self.height || 
-                    (pos.0 == self.end.0 && pos.1 == self.end.1) ||
-                    (pos.0 == self.start.0 && pos.1 == self.start.1)
-                {
-                    Some(pos)
-                }
-                else {
-                    None
-                }
-            })
-            .collect();
-    }
-}
-
-#[derive(Clone)]
-struct State {
-    pos: Pos,
-    time: i32,
-    visited: HashSet<Pos>,
-    priority: i32,
-}
-
-impl std::cmp::PartialOrd for State {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        return Some(other.priority.cmp(&self.priority));
-    }
-}
-
-impl std::cmp::Ord for State {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        return other.priority.cmp(&self.priority);
-    }
-}
-
-impl std::cmp::PartialEq for State {
-    fn eq(&self, other: &Self) -> bool {
-        return self.priority == other.priority;
-    }
-}
-
-impl std::cmp::Eq for State {
 }
 
 const DATA_STR: &str = include_str!("../data/day24.example");
@@ -122,7 +53,7 @@ pub fn main() {
         }))
         .collect();
 
-    let map = Map::new(width, height, (1, 0), (width, height + 1), blizzards);
+    let map = Map { width, height, start: (1, 0), end: (width, height + 1), blizzards };
 
     println!("[Day24] Part 1 => {}", run_part1(&map));
     //println!("[Day24] Part 2 => {}", run_part2());
@@ -130,18 +61,13 @@ pub fn main() {
     println!("[Day24] Complete -----------------------");
 }
 
-fn show_map(map: &Map, time: i32) {
+fn _show_map(map: &Map, time: i32) {
     let blizz_map = map.blizz_for_time(time);
 
     for y in 0..map.height + 2 {
         for x in 0..map.width + 2 {
-            if let Some(list) = blizz_map.get(&(x, y)) {
-                if list.len() > 1 {
-                    print!(" {} ", list.len());
-                }
-                else {
-                    print!(" {} ", list[0]);
-                }
+            if  blizz_map.contains(&(x, y)) {
+                print!(" x ");
             }
             else if x == 0 || x == map.width + 1 || y == 0 || y == map.height + 1 {
                 print!(" # ");
@@ -154,53 +80,29 @@ fn show_map(map: &Map, time: i32) {
     }
 }
 
-fn dist(p0: Pos, p1: Pos) -> i32 {
-    let dx = (p1.0 - p0.0).abs();
-    let dy = (p1.1 - p0.1).abs();
-    return dx + dy;
-}
-
 fn run_part1(map: &Map) -> i32 {
-    show_map(map, 0);
-
     println!("Starting from: {:?}, Going to: {:?}", map.start, map.end);
-    println!();
 
-    let mut stack = BinaryHeap::from(vec![
-        State { pos: map.start,
-            time: 0,
-            visited: HashSet::new(), //TODO: We need to keep track of blizzard config as well as pos
-            priority: dist(map.start, map.end),
-        }
-    ]);
-    let mut min_time: i32 = i32::MAX;
+    // Cache all possible configurations
+    let mut configs = Vec::<HashSet<Pos>>::new();
+    let mut time = 0;
+    let mut current = map.blizz_for_time(time);
 
-    while let Some(s) = stack.pop() {
-        println!("[time = {}][at = {:?}][priority = {}]", s.time, s.pos, s.priority);
+    while !configs.contains(&current) {
+        configs.push(current);
 
-        let opts = map.list_options(&s);
-        if opts.iter().any(|&pos| pos == map.end){
-            if s.time < min_time { min_time = s.time + 1 }
-            continue;
-        }
-
-        if s.time > min_time {
-            continue;
-        }
-
-        opts.iter()
-            .for_each(|&pos| {
-                // Update state with next position
-                    let mut state = s.clone();
-                    state.pos = pos;
-                    state.time += 1;
-                    state.priority = dist(pos, map.end);
-
-                    stack.push(state);
-            });
+        time += 1;
+        current = map.blizz_for_time(time)
     }
 
-    return min_time;
+    println!("Finished caching configs, we have {} configuration", configs.len());
+    println!();
+    //for i in 0..configs.len() + 1 {
+    //    _show_map(map, i as i32);
+    //    println!();
+    //}
+
+    return 0;
 }
 
 //fn run_part2() -> usize {
