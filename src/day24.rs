@@ -1,5 +1,5 @@
 use std::collections::HashSet;
-use std::fmt::{Display, write};
+use std::fmt::Display;
 
 type Pos = (i32, i32);
 type Blizzard = (Pos, char); // Starting Pos, Direction char
@@ -32,6 +32,17 @@ impl Map {
 
                 lut
             })
+    }
+
+    fn list_options(&self, pos: &Pos, start: Pos, end: Pos, config: &HashSet<Pos>) -> Vec<Pos> {
+        let (x, y) = *pos;
+        [
+            (x, y),
+            (x+1, y),
+            (x-1, y),
+            (x, y+1),
+            (x, y-1),
+        ].into_iter().filter(|&(tx, ty)| tx > 0 && ty > 0).collect()
     }
 }
 
@@ -121,6 +132,11 @@ fn run_part1(map: &Map) -> i32 {
 
     while let Some(s) = stack.pop() {
         println!("Exploring state:\n{}", s);
+
+        println!("Options: ");
+        let config = configs.get(s.time as usize % configs.len()).unwrap();
+        map.list_options(&s.pos, map.start, map.end, &config).iter().for_each(|o| println!("{:?}", o));
+        println!();
     }
 
     return 0;
