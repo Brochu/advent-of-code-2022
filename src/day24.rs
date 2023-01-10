@@ -34,7 +34,7 @@ impl Map {
             })
     }
 
-    fn list_options(&self, pos: &Pos, start: Pos, end: Pos, config: &HashSet<Pos>) -> Vec<Pos> {
+    fn list_options(&self, pos: &Pos, start: &Pos, end: &Pos, config: &HashSet<Pos>) -> Vec<Pos> {
         let (x, y) = *pos;
         [
             (x, y),
@@ -44,8 +44,9 @@ impl Map {
             (x, y-1),
         ]
             .into_iter()
-            .filter(|&(tx, ty)| tx > 0 && ty > 0)
+            .filter( |&(tx, ty)| (&(tx, ty) == start || &(tx, ty) == end) || (tx > 0 && ty > 0) )
             .collect()
+            //TODO: Still need to check the config for blizzards
     }
 }
 
@@ -134,7 +135,7 @@ fn run_part1(map: &Map) -> i32 {
 
         println!("Options: ");
         let config = configs.get(s.time as usize % configs.len()).unwrap();
-        map.list_options(&s.pos, map.start, map.end, &config).iter().for_each(|o| println!("{:?}", o));
+        map.list_options(&s.pos, &map.start, &map.end, &config).iter().for_each(|o| println!("{:?}", o));
         println!();
     }
 
