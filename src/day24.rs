@@ -124,10 +124,6 @@ fn run_part1(map: &Map) -> i32 {
 
     println!("Finished caching configs, we have {} configuration", configs.len());
     println!();
-    //for i in 0..configs.len() + 1 {
-    //    _show_map(map, i as i32);
-    //    println!();
-    //}
 
     // Start exploring paths
     let state = State { time: 0, pos: map.start, visited: HashSet::new() };
