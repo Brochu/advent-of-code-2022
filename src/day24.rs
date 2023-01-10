@@ -42,7 +42,10 @@ impl Map {
             (x-1, y),
             (x, y+1),
             (x, y-1),
-        ].into_iter().filter(|&(tx, ty)| tx > 0 && ty > 0).collect()
+        ]
+            .into_iter()
+            .filter(|&(tx, ty)| tx > 0 && ty > 0)
+            .collect()
     }
 }
 
@@ -95,7 +98,7 @@ fn _show_map(map: &Map, time: i32) {
 struct State {
     time: i32,
     pos: Pos,
-    visited: HashSet<Pos>,
+    visited: HashSet<(i32, Pos)>, // cache of visited states: (config idx; position)
 }
 
 impl Display for State {
