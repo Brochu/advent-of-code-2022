@@ -44,9 +44,11 @@ impl Map {
             (x, y-1),
         ]
             .into_iter()
-            .filter( |&(tx, ty)| (&(tx, ty) == start || &(tx, ty) == end) || (tx > 0 && ty > 0) )
+            .filter( |&(tx, ty)|
+                ((&(tx, ty) == start || &(tx, ty) == end) || (tx > 0 && ty > 0)) &&
+                !config.contains(&(tx, ty))
+            )
             .collect()
-            //TODO: Still need to check the config for blizzards
     }
 }
 
