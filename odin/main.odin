@@ -11,6 +11,7 @@ day_proc :: proc(^strings.Builder, ^strings.Builder)
 solutions: []day_proc = {
     d0run,
     d1run,
+    d2run,
 };
 
 main :: proc() {
